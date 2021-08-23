@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2020 The Facebook AI Research Team Authors and The HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -199,8 +198,8 @@ class EncoderLayer(nn.Module):
         super().__init__()
         self.embed_dim = config.d_model
         self.self_attn = SelfAttention(
-            self.embed_dim, config.encoder_attention_heads, dropout=config.attention_dropout,
-        )
+            self.embed_dim, config.encoder_attention_heads, config=config, dropout=config.attention_dropout,
+        )  # added config - Kevin
         self.normalize_before = config.normalize_before
         self.self_attn_layer_norm = LayerNorm(self.embed_dim)
         self.dropout = config.dropout
@@ -210,7 +209,7 @@ class EncoderLayer(nn.Module):
         self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = LayerNorm(self.embed_dim)
 
-    def forward(self, x, encoder_padding_mask, output_attentions=False):
+    def forward(self, x, encoder_padding_mask, output_attentions=False, output_norms=False):  # added by Kevin Zhao
         """
         Args:
             x (Tensor): input to the layer of shape `(seq_len, batch, embed_dim)`
@@ -225,9 +224,13 @@ class EncoderLayer(nn.Module):
         residual = x
         if self.normalize_before:
             x = self.self_attn_layer_norm(x)
-        x, attn_weights = self.self_attn(
-            query=x, key=x, key_padding_mask=encoder_padding_mask, output_attentions=output_attentions
+        # x, attn_weights = self.self_attn(
+        attn_outputs = self.self_attn(
+            query=x, key=x, key_padding_mask=encoder_padding_mask, output_attentions=output_attentions, output_norms=output_norms  # added by Kevin Zhao
         )
+
+        x = attn_outputs[0]
+        attn_weights = attn_outputs[1:]  # Tuple of (output_attns, output_norms), both optional - Kevin
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         if not self.normalize_before:
@@ -243,6 +246,10 @@ class EncoderLayer(nn.Module):
         x = residual + x
         if not self.normalize_before:
             x = self.final_layer_norm(x)
+
+        if output_norms:  # added by Kevin Zhao
+            return x, attn_weights[0], attn_weights[1:]
+
         return x, attn_weights
 
 
@@ -280,7 +287,7 @@ class BartEncoder(nn.Module):
         # mbart has one extra layer_norm
         self.layer_norm = LayerNorm(config.d_model) if config.normalize_before else None
 
-    def forward(self, input_ids, attention_mask=None, output_attentions=False, output_hidden_states=False):
+    def forward(self, input_ids, attention_mask=None, output_attentions=False, output_hidden_states=False, output_norms=False):  # added by Kevin Zhao
         """
         Args:
             input_ids (LongTensor): tokens in the source language of shape
@@ -309,7 +316,7 @@ class BartEncoder(nn.Module):
         # B x T x C -> T x B x C
         x = x.transpose(0, 1)
 
-        encoder_states, all_attentions = [], []
+        encoder_states, all_attentions, all_norms = [], [], ()
         for encoder_layer in self.layers:
             if output_hidden_states:
                 encoder_states.append(x)
@@ -318,10 +325,16 @@ class BartEncoder(nn.Module):
             if self.training and (dropout_probability < self.layerdrop):  # skip the layer
                 attn = None
             else:
-                x, attn = encoder_layer(x, attention_mask, output_attentions=output_attentions)
+                # x, attn = encoder_layer(x, attention_mask, output_attentions=output_attentions)
+                layer_outputs = encoder_layer(x, attention_mask, output_attentions=output_attentions, output_norms=output_norms)  # added by Kevin Zhao
+                x = layer_outputs[0]
+                attn = layer_outputs[1]
 
             if output_attentions:
                 all_attentions.append(attn)
+
+            if output_norms:
+                all_norms = all_norms + (layer_outputs[2:],)
 
         if self.layer_norm:
             x = self.layer_norm(x)
@@ -332,6 +345,9 @@ class BartEncoder(nn.Module):
         encoder_states = [hidden_state.transpose(0, 1) for hidden_state in encoder_states]
         x = x.transpose(0, 1)
 
+        if output_norms:
+            return x, encoder_states, all_attentions, all_norms
+
         return x, encoder_states, all_attentions
 
 
@@ -340,8 +356,8 @@ class DecoderLayer(nn.Module):
         super().__init__()
         self.embed_dim = config.d_model
         self.self_attn = SelfAttention(
-            embed_dim=self.embed_dim, num_heads=config.decoder_attention_heads, dropout=config.attention_dropout,
-        )
+            embed_dim=self.embed_dim, num_heads=config.decoder_attention_heads, config=config, dropout=config.attention_dropout,
+        )  # added config - Kevin
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
@@ -351,6 +367,7 @@ class DecoderLayer(nn.Module):
         self.encoder_attn = SelfAttention(
             self.embed_dim,
             config.decoder_attention_heads,
+            config=config,  # added config - Kevin
             dropout=config.attention_dropout,
             encoder_decoder_attention=True,
         )
@@ -368,6 +385,7 @@ class DecoderLayer(nn.Module):
         causal_mask=None,
         decoder_padding_mask=None,
         output_attentions=False,
+        output_norms=False,  # added by Kevin Zhao
     ):
         residual = x
 
@@ -377,14 +395,20 @@ class DecoderLayer(nn.Module):
             x = self.self_attn_layer_norm(x)
         # Self Attention
 
-        x, self_attn_weights = self.self_attn(
+        # x, self_attn_weights = self.self_attn(
+        attn_outputs = self.self_attn(
             query=x,
             key=x,
             layer_state=layer_state,  # adds keys to layer state
             key_padding_mask=decoder_padding_mask,
             attn_mask=causal_mask,
             output_attentions=output_attentions,
+            output_norms=output_norms,  # added by Kevin Zhao
         )
+
+        x = attn_outputs[0]
+        self_attn_weights = attn_outputs[1:]  # Tuple of (output_attns, output_norms), both optional - Kevin
+
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         if not self.normalize_before:
@@ -395,12 +419,15 @@ class DecoderLayer(nn.Module):
         assert self.encoder_attn.cache_key != self.self_attn.cache_key
         if self.normalize_before:
             x = self.encoder_attn_layer_norm(x)
-        x, _ = self.encoder_attn(
+        # x, _ = self.encoder_attn(
+        cross_attn_outputs = self.encoder_attn(
             query=x,
             key=encoder_hidden_states,
             key_padding_mask=encoder_attn_mask,
             layer_state=layer_state,  # mutates layer state
         )
+        x = cross_attn_outputs[0]
+        cross_attn_weights = attn_outputs[1:]  # Tuple of (output_attns, output_norms), both optional - Kevin
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         if not self.normalize_before:
@@ -417,6 +444,10 @@ class DecoderLayer(nn.Module):
         x = residual + x
         if not self.normalize_before:
             x = self.final_layer_norm(x)
+
+        if output_norms:  # added by Kevin Zhao
+            return x, self_attn_weights[0], layer_state, self_attn_weights[1:], cross_attn_weights[1:]
+
         return (
             x,
             self_attn_weights,
@@ -466,6 +497,7 @@ class BartDecoder(nn.Module):
         use_cache=False,
         output_attentions=False,
         output_hidden_states=False,
+        output_norms=False,  # Added by Kevin Zhao
         **unused,
     ):
         """
@@ -511,6 +543,8 @@ class BartDecoder(nn.Module):
         all_hidden_states = ()
         all_self_attns = ()
         next_decoder_cache = []
+        all_self_norms = ()
+        all_cross_norms = ()
         for idx, decoder_layer in enumerate(self.layers):
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             if output_hidden_states:
@@ -521,7 +555,8 @@ class BartDecoder(nn.Module):
 
             layer_state = decoder_cached_states[idx] if decoder_cached_states is not None else None
 
-            x, layer_self_attn, layer_past = decoder_layer(
+            # x, layer_self_attn, layer_past = decoder_layer(
+            layer_output = decoder_layer(
                 x,
                 encoder_hidden_states,
                 encoder_attn_mask=encoder_padding_mask,
@@ -529,7 +564,14 @@ class BartDecoder(nn.Module):
                 layer_state=layer_state,
                 causal_mask=decoder_causal_mask,
                 output_attentions=output_attentions,
+                output_norms=output_norms,  # Added by Kevin Zhao
             )
+
+            x, layer_self_attn, layer_past = layer_output[:3]
+            if output_norms:
+                self_norms, cross_norms = layer_output[3:]
+                all_self_norms += (self_norms,)
+                all_cross_norms += (cross_norms,)
 
             if use_cache:
                 next_decoder_cache.append(layer_past.copy())
@@ -548,6 +590,10 @@ class BartDecoder(nn.Module):
             next_cache = ((encoder_hidden_states, encoder_padding_mask), next_decoder_cache)
         else:
             next_cache = None
+
+        if output_norms:
+            return x, next_cache, all_hidden_states, list(all_self_attns), all_self_norms, all_cross_norms
+
         return x, next_cache, all_hidden_states, list(all_self_attns)
 
 
@@ -558,6 +604,75 @@ def _reorder_buffer(attn_cache, new_order):
     return attn_cache
 
 
+class BartSelfOutput(nn.Module):  # Copied from BertSelfOutput
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = LayerNorm(config.hidden_size)  # Changed from BertLayerNorm to LayerNorm
+        self.dropout = nn.Dropout(config.attention_dropout)  # Changed from config.hidden_dropout_prob
+
+    def forward(self, hidden_states, input_tensor):
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+        hidden_states = self.LayerNorm(hidden_states + input_tensor)
+        return hidden_states
+
+
+class BartNormOutput(nn.Module):  # This class is added by Goro Kobayashi (as BertNormOutput)
+    def __init__(self, config):
+        super().__init__()
+        self.num_attention_heads = config.num_attention_heads
+        self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
+        self.all_head_size = self.num_attention_heads * self.attention_head_size
+
+    def forward(self, attention_probs, value_layer, dense):  # removed hidden states - Kevin Zhao
+        # attention_probs: (batch, num_heads, seq_length, seq_length)
+        # value_layer: (batch, num_heads, seq_length, head_size)
+        # dense: nn.Linear(all_head_size, all_head_size)
+
+        with torch.no_grad():
+            # value_layer is converted to (batch, seq_length, num_heads, 1, head_size)
+            #value_layer = value_layer.permute(0, 2, 1, 3).contiguous()
+            value_layer = value_layer.permute(1, 0, 2).unsqueeze(0).contiguous()  # assumed batch size of 1 - Kevin Zhao
+            value_shape = value_layer.size()
+            value_layer = value_layer.view(value_shape[:-1] + (1, value_shape[-1],))
+
+            # dense weight is converted to (num_heads, head_size, all_head_size)
+            dense = dense.weight
+            dense = dense.view(self.all_head_size, self.num_attention_heads, self.attention_head_size)
+            dense = dense.permute(1, 2, 0).contiguous()
+
+            # Make transformed vectors f(x) from Value vectors (value_layer) and weight matrix (dense).
+            transformed_layer = value_layer.matmul(dense)
+            transformed_shape = transformed_layer.size()  # (batch, seq_length, num_heads, 1, all_head_size)
+            transformed_layer = transformed_layer.view(transformed_shape[:-2] + (transformed_shape[-1],))
+            transformed_layer = transformed_layer.permute(0, 2, 1, 3).contiguous()
+            transformed_shape = transformed_layer.size()  # (batch, num_heads, seq_length, all_head_size)
+            transformed_norm = torch.norm(transformed_layer, dim=-1)
+
+            # Make weighted vectors αf(x) from transformed vectors (transformed_layer) and attention weights (attention_probs).
+            weighted_layer = torch.einsum('bhks,bhsd->bhksd', attention_probs,
+                                          transformed_layer)  # (batch, num_heads, seq_length, seq_length, all_head_size)
+            weighted_norm = torch.norm(weighted_layer, dim=-1)
+
+            # Sum each αf(x) over all heads: (batch, seq_length, seq_length, all_head_size)
+            summed_weighted_layer = weighted_layer.sum(dim=1)
+
+            # Calculate L2 norm of summed weighted vectors: (batch, seq_length, seq_length)
+            summed_weighted_norm = torch.norm(summed_weighted_layer, dim=-1)
+
+            del transformed_shape
+
+            # outputs: ||f(x)||, ||αf(x)||, ||Σαf(x)||
+            outputs = (transformed_norm,
+                       weighted_norm,
+                       summed_weighted_norm,
+                       )
+            del transformed_layer, weighted_layer, summed_weighted_layer
+        torch.cuda.empty_cache()
+        return outputs
+
+
 class SelfAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
@@ -565,6 +680,7 @@ class SelfAttention(nn.Module):
         self,
         embed_dim,
         num_heads,
+        config,  # added by Kevin Zhao - TODO: remove embed_dim, num_heads
         dropout=0.0,
         bias=True,
         encoder_decoder_attention=False,  # otherwise self_attention
@@ -583,6 +699,8 @@ class SelfAttention(nn.Module):
         self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
         self.cache_key = "encoder_decoder" if self.encoder_decoder_attention else "self"
+        self.output = BartSelfOutput(config)  # added by Goro Kobayashi
+        self.norm = BartNormOutput(config)  # added by Goro Kobayashi
 
     def _shape(self, tensor, dim_0, bsz):
         return tensor.contiguous().view(dim_0, bsz * self.num_heads, self.head_dim).transpose(0, 1)
@@ -595,7 +713,8 @@ class SelfAttention(nn.Module):
         layer_state: Optional[Dict[str, Optional[Tensor]]] = None,
         attn_mask: Optional[Tensor] = None,
         output_attentions=False,
-    ) -> Tuple[Tensor, Optional[Tensor]]:
+        output_norms=False,  # added by Kevin Zhao
+    ): # -> Tuple[Tensor, Optional[Tensor]]:
         """Input shape: Time(SeqLen) x Batch x Channel"""
         static_kv: bool = self.encoder_decoder_attention
         tgt_len, bsz, embed_dim = query.size()
@@ -670,6 +789,14 @@ class SelfAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
         else:
             attn_weights = None
+
+        if output_norms:
+            attention_output = self.output(attn_output, query)
+            norms_outputs = self.norm(attn_weights, v, self.output.dense)
+            outputs = (attention_output, attn_weights,) + norms_outputs  # add attentions and norms if we output them
+            return outputs
+            # return (attn_output, attn_weights, v)
+
         return attn_output, attn_weights
 
     def _use_saved_state(self, k, v, saved_state, key_padding_mask, static_kv, bsz):
@@ -830,6 +957,7 @@ class BartModel(PretrainedBartModel):
         use_cache=None,
         output_attentions=None,
         output_hidden_states=None,
+        output_norms=None,  # Added by Kevin Zhao
     ):
 
         if decoder_input_ids is None:
@@ -861,6 +989,7 @@ class BartModel(PretrainedBartModel):
                 attention_mask=attention_mask,
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
+                output_norms=output_norms,  # added by Kevin Zhao
             )
         assert isinstance(encoder_outputs, tuple)
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
@@ -873,6 +1002,7 @@ class BartModel(PretrainedBartModel):
             decoder_cached_states=decoder_cached_states,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
+            output_norms=output_norms,  # added by Kevin Zhao
             use_cache=use_cache,
         )
 
@@ -1281,3 +1411,58 @@ class SinusoidalPositionalEmbedding(nn.Embedding):
             # starts at 0, ends at 1-seq_len
             positions = torch.arange(seq_len, dtype=torch.long, device=self.weight.device)
         return super().forward(positions)
+
+        self.self_attn = SelfAttention(
+            self.embed_dim, config.encoder_attention_heads, config=config, dropout=config.attention_dropout,
+        )  # added config - Kevin
+        self.normalize_before = config.normalize_before
+        self.self_attn_layer_norm = LayerNorm(self.embed_dim)
+        self.dropout = config.dropout
+        self.activation_fn = ACT2FN[config.activation_function]
+        self.activation_dropout = config.activation_dropout
+        self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
+        self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
+        self.final_layer_norm = LayerNorm(self.embed_dim)
+
+    def forward(self, x, encoder_padding_mask, output_attentions=False, output_norms=False):  # added by Kevin Zhao
+        """
+        Args:
+            x (Tensor): input to the layer of shape `(seq_len, batch, embed_dim)`
+            encoder_padding_mask (ByteTensor): binary ByteTensor of shape
+                `(batch, src_len)` where padding elements are indicated by ``1``.
+            for t_tgt, t_src is excluded (or masked out), =0 means it is
+            included in attention
+
+        Returns:
+            encoded output of shape `(seq_len, batch, embed_dim)`
+        """
+        residual = x
+        if self.normalize_before:
+            x = self.self_attn_layer_norm(x)
+        # x, attn_weights = self.self_attn(
+        attn_outputs = self.self_attn(
+            query=x, key=x, key_padding_mask=encoder_padding_mask, output_attentions=output_attentions, output_norms=output_norms  # added by Kevin Zhao
+        )
+
+        x = attn_outputs[0]
+        attn_weights = attn_outputs[1:]  # Tuple of (output_attns, output_norms), both optional - Kevin
+        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = residual + x
+        if not self.normalize_before:
+            x = self.self_attn_layer_norm(x)
+
+        residual = x
+        if self.normalize_before:
+            x = self.final_layer_norm(x)
+        x = self.activation_fn(self.fc1(x))
+        x = F.dropout(x, p=self.activation_dropout, training=self.training)
+        x = self.fc2(x)
+        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = residual + x
+        if not self.normalize_before:
+            x = self.final_layer_norm(x)
+
+        if output_norms:  # added by Kevin Zhao
+            return x, attn_weights[0], attn_weights[1]
+
+        return x, attn_weights

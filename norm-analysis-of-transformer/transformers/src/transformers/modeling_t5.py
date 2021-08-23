@@ -302,6 +302,7 @@ class T5Attention(nn.Module):
         query_length=None,
         use_cache=False,
         output_attentions=False,
+        output_norms=False,  # added by Kevin Zhao
     ):
         """
         Self-attention (if kv is None) or attention over source sentence (provided by kv).
@@ -387,11 +388,81 @@ class T5Attention(nn.Module):
         context = self.o(context)
 
         outputs = (context,) + present_key_value_state
-
         if output_attentions:
             outputs = outputs + (weights,)
         if self.has_relative_attention_bias:
             outputs = outputs + (position_bias,)
+        if output_norms:  # Added by Kevin Zhao
+            outputs = outputs + (v,)
+
+        return outputs
+
+
+class T5SelfOutput(nn.Module):  # Copied from BertSelfOutput
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = T5LayerNorm(config.hidden_size, eps=config.layer_norm_epsilon)  # Changed to T5LayerNorm, eps to epsilon
+        self.dropout = nn.Dropout(config.dropout_rate)  # Changed attribute from hidden_dropout_prob
+
+    def forward(self, hidden_states, input_tensor):
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+        hidden_states = self.LayerNorm(hidden_states + input_tensor)
+        return hidden_states
+
+
+class T5NormOutput(nn.Module):  # This class is added by Goro Kobayashi (as BertNormOutput)
+    def __init__(self, config):
+        super().__init__()
+        self.num_attention_heads = config.num_attention_heads
+        self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
+        self.all_head_size = self.num_attention_heads * self.attention_head_size
+
+    def forward(self, attention_probs, value_layer, dense):  # removed hidden states - Kevin Zhao
+        # attention_probs: (batch, num_heads, seq_length, seq_length)
+        # value_layer: (batch, num_heads, seq_length, head_size)
+        # dense: nn.Linear(all_head_size, all_head_size)
+
+        with torch.no_grad():
+            # value_layer is converted to (batch, seq_length, num_heads, 1, head_size)
+            value_layer = value_layer.permute(0, 2, 1, 3).contiguous()
+            value_shape = value_layer.size()
+            value_layer = value_layer.view(value_shape[:-1] + (1, value_shape[-1],))
+
+            # dense weight is converted to (num_heads, head_size, all_head_size)
+            dense = dense.weight
+            dense = dense.view(self.all_head_size, self.num_attention_heads, self.attention_head_size)
+            dense = dense.permute(1, 2, 0).contiguous()
+
+            # Make transformed vectors f(x) from Value vectors (value_layer) and weight matrix (dense).
+            transformed_layer = value_layer.matmul(dense)
+            transformed_shape = transformed_layer.size()  # (batch, seq_length, num_heads, 1, all_head_size)
+            transformed_layer = transformed_layer.view(transformed_shape[:-2] + (transformed_shape[-1],))
+            transformed_layer = transformed_layer.permute(0, 2, 1, 3).contiguous()
+            transformed_shape = transformed_layer.size()  # (batch, num_heads, seq_length, all_head_size)
+            transformed_norm = torch.norm(transformed_layer, dim=-1)
+
+            # Make weighted vectors αf(x) from transformed vectors (transformed_layer) and attention weights (attention_probs).
+            weighted_layer = torch.einsum('bhks,bhsd->bhksd', attention_probs,
+                                          transformed_layer)  # (batch, num_heads, seq_length, seq_length, all_head_size)
+            weighted_norm = torch.norm(weighted_layer, dim=-1)
+
+            # Sum each αf(x) over all heads: (batch, seq_length, seq_length, all_head_size)
+            summed_weighted_layer = weighted_layer.sum(dim=1)
+
+            # Calculate L2 norm of summed weighted vectors: (batch, seq_length, seq_length)
+            summed_weighted_norm = torch.norm(summed_weighted_layer, dim=-1)
+
+            del transformed_shape
+
+            # outputs: ||f(x)||, ||αf(x)||, ||Σαf(x)||
+            outputs = (transformed_norm,
+                       weighted_norm,
+                       summed_weighted_norm,
+                       )
+            del transformed_layer, weighted_layer, summed_weighted_layer
+        torch.cuda.empty_cache()
         return outputs
 
 
@@ -401,6 +472,8 @@ class T5LayerSelfAttention(nn.Module):
         self.SelfAttention = T5Attention(config, has_relative_attention_bias=has_relative_attention_bias)
         self.layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(config.dropout_rate)
+        self.output = T5SelfOutput(config)  # added by Goro Kobayashi
+        self.norm = T5NormOutput(config)  # added by Goro Kobayashi
 
     def forward(
         self,
@@ -411,6 +484,7 @@ class T5LayerSelfAttention(nn.Module):
         past_key_value_state=None,
         use_cache=False,
         output_attentions=False,
+        output_norms=False,  # added by Kevin Zhao
     ):
         norm_x = self.layer_norm(hidden_states)
         attention_output = self.SelfAttention(
@@ -421,10 +495,25 @@ class T5LayerSelfAttention(nn.Module):
             past_key_value_state=past_key_value_state,
             use_cache=use_cache,
             output_attentions=output_attentions,
-        )
+            output_norms=output_norms,  # added by Kevin Zhao
+        )  # Should be: context, present_key_value_state, (weights), (position_bias), (values) - Kevin Zhao
         y = attention_output[0]
+
+        if output_norms:  # added by Kevin Zhao
+            self_output = self.output(y, hidden_states)
+            if self.SelfAttention.has_relative_attention_bias:
+                # Skip attention_output[3] because that's the position bias
+                norms_outputs = self.norm(attention_output[2], attention_output[4], self.output.dense)
+                outputs = (self_output, attention_output[1], attention_output[2], attention_output[3],) + (norms_outputs,) # add attentions and norms if we output them
+            else:
+                norms_outputs = self.norm(attention_output[2], attention_output[3], self.output.dense)
+                outputs = (self_output, attention_output[1], attention_output[2],) + (norms_outputs,)  # add attentions and norms if we output them
+
+            return outputs
+
         layer_output = hidden_states + self.dropout(y)
         outputs = (layer_output,) + attention_output[1:]  # add attentions if we output them
+
         return outputs
 
 
@@ -434,6 +523,9 @@ class T5LayerCrossAttention(nn.Module):
         self.EncDecAttention = T5Attention(config, has_relative_attention_bias=has_relative_attention_bias)
         self.layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(config.dropout_rate)
+        self.output = T5SelfOutput(config)  # added by Goro Kobayashi
+        self.norm = T5NormOutput(config)  # added by Goro Kobayashi
+
 
     def forward(
         self,
@@ -446,6 +538,7 @@ class T5LayerCrossAttention(nn.Module):
         use_cache=False,
         query_length=None,
         output_attentions=False,
+        output_norms=False,  # added by Kevin Zhao
     ):
         norm_x = self.layer_norm(hidden_states)
         attention_output = self.EncDecAttention(
@@ -458,8 +551,24 @@ class T5LayerCrossAttention(nn.Module):
             use_cache=use_cache,
             query_length=query_length,
             output_attentions=output_attentions,
+            output_norms=output_norms,  # added by Kevin Zhao
         )
         y = attention_output[0]
+
+        if output_norms:  # added by Kevin Zhao
+            self_output = self.output(y, hidden_states)
+            if self.EncDecAttention.has_relative_attention_bias:
+                # Skip attention_output[3] because that's the position bias
+                norms_outputs = self.norm(attention_output[2], attention_output[4], self.output.dense)
+                outputs = (self_output, attention_output[1], attention_output[2],
+                           attention_output[3],) + (norms_outputs,)  # add attentions and norms if we output them
+            else:
+                norms_outputs = self.norm(attention_output[2], attention_output[3], self.output.dense)
+                outputs = (self_output, attention_output[1],
+                           attention_output[2],) + (norms_outputs,)  # add attentions and norms if we output them
+
+            return outputs
+
         layer_output = hidden_states + self.dropout(y)
         outputs = (layer_output,) + attention_output[1:]  # add attentions if we output them
         return outputs
@@ -488,6 +597,7 @@ class T5Block(nn.Module):
         past_key_value_state=None,
         use_cache=False,
         output_attentions=False,
+        output_norms=False,  # Added by Kevin Zhao
     ):
 
         if past_key_value_state is not None:
@@ -514,6 +624,7 @@ class T5Block(nn.Module):
             past_key_value_state=self_attn_past_key_value_state,
             use_cache=use_cache,
             output_attentions=output_attentions,
+            output_norms=output_norms,  # Added by Kevin Zhao
         )
         hidden_states, present_key_value_state = self_attention_outputs[:2]
         attention_outputs = self_attention_outputs[2:]  # Keep self-attention outputs and relative position weights
@@ -536,6 +647,7 @@ class T5Block(nn.Module):
                 query_length=query_length,
                 use_cache=use_cache,
                 output_attentions=output_attentions,
+                output_norms=output_norms,  # Added by Kevin Zhao
             )
             hidden_states = cross_attention_outputs[0]
             # Combine self attn and cross attn key value states
@@ -664,6 +776,7 @@ class T5Stack(T5PreTrainedModel):
         use_cache=None,
         output_attentions=None,
         output_hidden_states=None,
+        output_norms=None,  # Added by Kevin Zhao
     ):
 
         use_cache = use_cache if use_cache is not None else self.config.use_cache
@@ -726,6 +839,8 @@ class T5Stack(T5PreTrainedModel):
         present_key_value_states = ()
         all_hidden_states = ()
         all_attentions = ()
+        all_self_norms = ()
+        all_cross_norms = ()
         position_bias = None
         encoder_decoder_position_bias = None
 
@@ -746,6 +861,7 @@ class T5Stack(T5PreTrainedModel):
                 past_key_value_state=past_key_value_state,
                 use_cache=use_cache,
                 output_attentions=output_attentions,
+                output_norms=output_norms,  # Added by Kevin Zhao
             )
             # layer_outputs is a tuple with:
             # hidden-states, key-value-states, (self-attention weights), (self-attention position bias), (cross-attention weights), (cross-attention position bias)
@@ -756,12 +872,30 @@ class T5Stack(T5PreTrainedModel):
                 # layer_outputs = hidden-states, key-value-states (self-attention weights), (self-attention position bias), (cross-attention weights), (cross-attention position bias)
                 position_bias = layer_outputs[3 if output_attentions else 2]
                 if self.is_decoder and encoder_hidden_states is not None:
-                    encoder_decoder_position_bias = layer_outputs[5 if output_attentions else 3]
+                    encoder_decoder_position_bias = layer_outputs[(5 if output_attentions else 3) if not output_norms else (6 if output_attentions else 4)]
             # append next layer key value states
             present_key_value_states = present_key_value_states + (present_key_value_state,)
 
             if output_attentions:
                 all_attentions = all_attentions + (layer_outputs[2],)  # We keep only self-attention weights for now
+
+            if output_norms:  # Added by Kevin Zhao
+                if not self.is_decoder:
+                    self_norms = layer_outputs[-1]
+                    all_self_norms += (self_norms,)
+                else:
+                    offset = 0
+                    if output_attentions:
+                        offset += 1
+
+                    assert layer_module.layer[0].SelfAttention.has_relative_attention_bias == layer_module.layer[1].EncDecAttention.has_relative_attention_bias, "Assuming self and cross have same config"
+                    if layer_module.layer[0].SelfAttention.has_relative_attention_bias:
+                        offset += 1
+
+                    self_norms = layer_outputs[1 + (1 + offset)]
+                    cross_norms = layer_outputs[1 + (1 + offset) * 2]
+                    all_self_norms += (self_norms,)
+                    all_cross_norms += (cross_norms,)
 
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -778,6 +912,11 @@ class T5Stack(T5PreTrainedModel):
             outputs = outputs + (all_hidden_states,)
         if output_attentions:
             outputs = outputs + (all_attentions,)
+        if output_norms:
+            outputs = outputs + (all_self_norms,)
+            if self.is_decoder:
+                outputs = outputs + (all_cross_norms,)
+
         return outputs  # last-layer hidden state, (presents,) (all hidden states), (all attentions)
 
 
@@ -903,6 +1042,7 @@ class T5Model(T5PreTrainedModel):
         head_mask=None,
         output_attentions=None,
         output_hidden_states=None,
+        output_norms=None,  # Added by Kevin Zhao
     ):
         r"""
     Returns:
@@ -949,6 +1089,7 @@ class T5Model(T5PreTrainedModel):
                 head_mask=head_mask,
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
+                output_norms=output_norms,  # Added by Kevin Zhao
             )
 
         hidden_states = encoder_outputs[0]
@@ -973,6 +1114,7 @@ class T5Model(T5PreTrainedModel):
             use_cache=use_cache,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
+            output_norms=output_norms,  # Added by Kevin Zhao
         )
 
         if use_cache is True:
