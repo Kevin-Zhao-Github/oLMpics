@@ -248,7 +248,7 @@ class EncoderLayer(nn.Module):
             x = self.final_layer_norm(x)
 
         if output_norms:  # added by Kevin Zhao
-            return x, attn_weights[0], attn_weights[1:]
+            return x, attn_weights[0], attn_weights[1]
 
         return x, attn_weights
 
@@ -334,7 +334,7 @@ class BartEncoder(nn.Module):
                 all_attentions.append(attn)
 
             if output_norms:
-                all_norms = all_norms + (layer_outputs[2:],)
+                all_norms = all_norms + (layer_outputs[2],)
 
         if self.layer_norm:
             x = self.layer_norm(x)
@@ -425,9 +425,11 @@ class DecoderLayer(nn.Module):
             key=encoder_hidden_states,
             key_padding_mask=encoder_attn_mask,
             layer_state=layer_state,  # mutates layer state
+            output_attentions=output_attentions,
+            output_norms=output_norms,  # added by Kevin Zhao
         )
         x = cross_attn_outputs[0]
-        cross_attn_weights = attn_outputs[1:]  # Tuple of (output_attns, output_norms), both optional - Kevin
+        cross_attn_weights = cross_attn_outputs[1:]  # Tuple of (output_attns, output_norms), both optional - Kevin
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         if not self.normalize_before:
@@ -446,7 +448,7 @@ class DecoderLayer(nn.Module):
             x = self.final_layer_norm(x)
 
         if output_norms:  # added by Kevin Zhao
-            return x, self_attn_weights[0], layer_state, self_attn_weights[1:], cross_attn_weights[1:]
+            return x, self_attn_weights[0], layer_state, self_attn_weights[1], cross_attn_weights[1]
 
         return (
             x,
@@ -604,20 +606,6 @@ def _reorder_buffer(attn_cache, new_order):
     return attn_cache
 
 
-class BartSelfOutput(nn.Module):  # Copied from BertSelfOutput
-    def __init__(self, config):
-        super().__init__()
-        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.LayerNorm = LayerNorm(config.hidden_size)  # Changed from BertLayerNorm to LayerNorm
-        self.dropout = nn.Dropout(config.attention_dropout)  # Changed from config.hidden_dropout_prob
-
-    def forward(self, hidden_states, input_tensor):
-        hidden_states = self.dense(hidden_states)
-        hidden_states = self.dropout(hidden_states)
-        hidden_states = self.LayerNorm(hidden_states + input_tensor)
-        return hidden_states
-
-
 class BartNormOutput(nn.Module):  # This class is added by Goro Kobayashi (as BertNormOutput)
     def __init__(self, config):
         super().__init__()
@@ -699,7 +687,6 @@ class SelfAttention(nn.Module):
         self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
         self.cache_key = "encoder_decoder" if self.encoder_decoder_attention else "self"
-        self.output = BartSelfOutput(config)  # added by Goro Kobayashi
         self.norm = BartNormOutput(config)  # added by Goro Kobayashi
 
     def _shape(self, tensor, dim_0, bsz):
@@ -791,9 +778,8 @@ class SelfAttention(nn.Module):
             attn_weights = None
 
         if output_norms:
-            attention_output = self.output(attn_output, query)
-            norms_outputs = self.norm(attn_weights, v, self.output.dense)
-            outputs = (attention_output, attn_weights,) + norms_outputs  # add attentions and norms if we output them
+            norms_outputs = self.norm(attn_weights, v, self.out_proj)
+            outputs = (attn_output, attn_weights,) + (norms_outputs,)  # add attentions and norms if we output them
             return outputs
             # return (attn_output, attn_weights, v)
 
@@ -1445,7 +1431,7 @@ class SinusoidalPositionalEmbedding(nn.Embedding):
         )
 
         x = attn_outputs[0]
-        attn_weights = attn_outputs[1:]  # Tuple of (output_attns, output_norms), both optional - Kevin
+        attn_weights = attn_outputs[1:]
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
         if not self.normalize_before:

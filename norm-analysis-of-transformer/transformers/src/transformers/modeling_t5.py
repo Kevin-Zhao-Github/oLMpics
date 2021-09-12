@@ -398,20 +398,6 @@ class T5Attention(nn.Module):
         return outputs
 
 
-class T5SelfOutput(nn.Module):  # Copied from BertSelfOutput
-    def __init__(self, config):
-        super().__init__()
-        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.LayerNorm = T5LayerNorm(config.hidden_size, eps=config.layer_norm_epsilon)  # Changed to T5LayerNorm, eps to epsilon
-        self.dropout = nn.Dropout(config.dropout_rate)  # Changed attribute from hidden_dropout_prob
-
-    def forward(self, hidden_states, input_tensor):
-        hidden_states = self.dense(hidden_states)
-        hidden_states = self.dropout(hidden_states)
-        hidden_states = self.LayerNorm(hidden_states + input_tensor)
-        return hidden_states
-
-
 class T5NormOutput(nn.Module):  # This class is added by Goro Kobayashi (as BertNormOutput)
     def __init__(self, config):
         super().__init__()
@@ -472,7 +458,6 @@ class T5LayerSelfAttention(nn.Module):
         self.SelfAttention = T5Attention(config, has_relative_attention_bias=has_relative_attention_bias)
         self.layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(config.dropout_rate)
-        self.output = T5SelfOutput(config)  # added by Goro Kobayashi
         self.norm = T5NormOutput(config)  # added by Goro Kobayashi
 
     def forward(
@@ -498,20 +483,19 @@ class T5LayerSelfAttention(nn.Module):
             output_norms=output_norms,  # added by Kevin Zhao
         )  # Should be: context, present_key_value_state, (weights), (position_bias), (values) - Kevin Zhao
         y = attention_output[0]
+        layer_output = hidden_states + self.dropout(y)
 
         if output_norms:  # added by Kevin Zhao
-            self_output = self.output(y, hidden_states)
             if self.SelfAttention.has_relative_attention_bias:
                 # Skip attention_output[3] because that's the position bias
-                norms_outputs = self.norm(attention_output[2], attention_output[4], self.output.dense)
-                outputs = (self_output, attention_output[1], attention_output[2], attention_output[3],) + (norms_outputs,) # add attentions and norms if we output them
+                norms_outputs = self.norm(attention_output[2], attention_output[4], self.SelfAttention.o)
+                outputs = (layer_output, attention_output[1], attention_output[2], attention_output[3],) + (norms_outputs,) # add attentions and norms if we output them
             else:
-                norms_outputs = self.norm(attention_output[2], attention_output[3], self.output.dense)
-                outputs = (self_output, attention_output[1], attention_output[2],) + (norms_outputs,)  # add attentions and norms if we output them
+                norms_outputs = self.norm(attention_output[2], attention_output[3], self.SelfAttention.o)
+                outputs = (layer_output, attention_output[1], attention_output[2],) + (norms_outputs,)  # add attentions and norms if we output them
 
             return outputs
 
-        layer_output = hidden_states + self.dropout(y)
         outputs = (layer_output,) + attention_output[1:]  # add attentions if we output them
 
         return outputs
@@ -523,9 +507,7 @@ class T5LayerCrossAttention(nn.Module):
         self.EncDecAttention = T5Attention(config, has_relative_attention_bias=has_relative_attention_bias)
         self.layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(config.dropout_rate)
-        self.output = T5SelfOutput(config)  # added by Goro Kobayashi
         self.norm = T5NormOutput(config)  # added by Goro Kobayashi
-
 
     def forward(
         self,
@@ -554,22 +536,21 @@ class T5LayerCrossAttention(nn.Module):
             output_norms=output_norms,  # added by Kevin Zhao
         )
         y = attention_output[0]
+        layer_output = hidden_states + self.dropout(y)
 
         if output_norms:  # added by Kevin Zhao
-            self_output = self.output(y, hidden_states)
             if self.EncDecAttention.has_relative_attention_bias:
                 # Skip attention_output[3] because that's the position bias
-                norms_outputs = self.norm(attention_output[2], attention_output[4], self.output.dense)
-                outputs = (self_output, attention_output[1], attention_output[2],
+                norms_outputs = self.norm(attention_output[2], attention_output[4], self.EncDecAttention.o)
+                outputs = (layer_output, attention_output[1], attention_output[2],
                            attention_output[3],) + (norms_outputs,)  # add attentions and norms if we output them
             else:
-                norms_outputs = self.norm(attention_output[2], attention_output[3], self.output.dense)
-                outputs = (self_output, attention_output[1],
+                norms_outputs = self.norm(attention_output[2], attention_output[3], self.EncDecAttention.o)
+                outputs = (layer_output, attention_output[1],
                            attention_output[2],) + (norms_outputs,)  # add attentions and norms if we output them
 
             return outputs
 
-        layer_output = hidden_states + self.dropout(y)
         outputs = (layer_output,) + attention_output[1:]  # add attentions if we output them
         return outputs
 
@@ -1079,7 +1060,6 @@ class T5Model(T5PreTrainedModel):
             >>> last_hidden_states = outputs[0]  # The last hidden-state is the first element of the output tuple
         """
         use_cache = use_cache if use_cache is not None else self.config.use_cache
-
         # Encode if needed (training, first prediction pass)
         if encoder_outputs is None:
             encoder_outputs = self.encoder(
