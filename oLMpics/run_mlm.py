@@ -15,7 +15,6 @@ Tested models:
 "albert-large-v1"
 
 Download data from: https://github.com/alontalmor/oLMpics/blob/master/README.md
-
 """
 
 import argparse
@@ -46,6 +45,7 @@ logging.basicConfig(
     level=logging.INFO,
 )
 
+
 def get_args():
     """ Set hyperparameters """
     parser = argparse.ArgumentParser()
@@ -74,6 +74,12 @@ def get_args():
         help="Number of examples to evaluate on, default of -1 evaluates on all examples"
     )
     parser.add_argument(
+        "--num_heads_disabled",
+        default=0,
+        type=int,
+        help="Number of heads to disable"
+    )
+    parser.add_argument(
         "--device",
         default="cuda" if torch.cuda.is_available() else "cpu"
     )
@@ -83,6 +89,7 @@ def get_args():
 
 
 def get_data(file_path, sample, num_choices):
+    """ Reads data from jsonl file, code taken from original oLMpics authors """
     data_file = open(file_path, "r")
     logger.info("Reading QA instances from jsonl dataset at: %s", file_path)
     item_jsons = []
@@ -194,7 +201,24 @@ class RoBERTaDataset(Dataset):
         }
 
 
-def evaluate(args, model, tokenizer, eval_dataset, num_heads_disabled=None):
+def evaluate(args, model, tokenizer, eval_dataset, output_confidence=False):
+    """
+    Args:
+        args:
+            hyperparameters set using get_args()
+        model:
+            Huggingface model which will be used for evaluation
+        tokenizer:
+            Huggingface tokenizer
+        output_confidence:
+            If True, will output the naive "confidence" measure of attention heads
+            See "Analyzing multi-head self-attention: Specialized heads do the heavy lifting, the rest can be pruned" (Voita) for details
+
+    Returns: Tuple of answers, preds, (confidence)
+        answers - list of ground-truth labels
+        preds - list of labels predicted by model
+        confidence - included if output_confidence=True, tensor with confidence ratings
+    """
     eval_sampler = SequentialSampler(eval_dataset)
     eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=args.per_device_eval_batch_size)
 
@@ -212,21 +236,23 @@ def evaluate(args, model, tokenizer, eval_dataset, num_heads_disabled=None):
 
     all_answers = []
     all_preds = []
-    all_attentions = torch.zeros((model.config.num_hidden_layers, model.config.num_attention_heads))  # (24, 16) for BERT-large
+
+    if output_confidence:
+        all_attentions = torch.zeros((model.config.num_hidden_layers, model.config.num_attention_heads))
 
     head_mask = torch.ones(model.config.num_hidden_layers, model.config.num_attention_heads)
-    if any(prefix in args.model_name_or_path.lower() for prefix in ("roberta", "bart", "distil", "electra", "t5")):
-        if num_heads_disabled is not None:
-            random_pairs = []
-            while len(random_pairs) < num_heads_disabled:
-                random_pair = (random.randint(0, model.config.num_attention_heads-1), random.randint(0, model.config.num_hidden_layers-1))
-                if random_pair not in random_pairs:
-                    random_pairs.append(random_pair)
+    if args.num_heads_disabled > 0:
+        assert any(prefix in args.model_name_or_path.lower() for prefix in ("roberta", "bert")), "Not tested for other models"
+        assert args.num_heads_disabled < model.config.num_hidden_layers * model.config.num_attention_heads, \
+            f"Model only has {model.config.num_hidden_layers * model.config.num_attention_heads} heads"
+        random_pairs = []
+        while len(random_pairs) < args.num_heads_disabled:
+            random_pair = (random.randint(0, model.config.num_attention_heads-1), random.randint(0, model.config.num_hidden_layers-1))
+            if random_pair not in random_pairs:
+                random_pairs.append(random_pair)
 
-            for pair in random_pairs:
-                head_mask[pair[1], pair[0]] = 0
-    elif num_heads_disabled is not None:
-        raise NotImplementedError
+        for pair in random_pairs:
+            head_mask[pair[1], pair[0]] = 0
 
     for batch in eval_dataloader:
         model.eval()
@@ -249,19 +275,20 @@ def evaluate(args, model, tokenizer, eval_dataset, num_heads_disabled=None):
 #                 BATCH_LABELS = LABELS.repeat(batch_len, 1)
 #                 outputs = model(input_ids=batch["input_ids"], labels=BATCH_LABELS)
 
-#             attentions = torch.stack(outputs.attentions) #[:,:,:,:-1, :-1]
+            if output_confidence:
+                attentions = torch.stack(outputs.attentions) #[:,:,:,:-1, :-1]
 
-#             for b in range(attentions.size()[1]):
-#                 #sep_ind = (batch["input_ids"][b] == tokenizer.encode(tokenizer.sep_token, add_special_tokens=False)[0]).nonzero(as_tuple=True)[0].item()
-#                 sep_ind = (batch["input_ids"][b] == tokenizer.encode(tokenizer.sep_token, add_special_tokens=False)[0]).nonzero(as_tuple=True)[0].item()
-#                 for seq_ind1 in range(attentions.size()[-1]):
-#                     for seq_ind2 in range(attentions.size()[-1]):
-#                         if seq_ind1 == sep_ind or seq_ind2 == sep_ind or seq_ind1 == 0 or seq_ind2 == 0:
-#                             attentions[:, b, :, seq_ind1, seq_ind2] = 0
+                for b in range(attentions.size()[1]):
+                    #sep_ind = (batch["input_ids"][b] == tokenizer.encode(tokenizer.sep_token, add_special_tokens=False)[0]).nonzero(as_tuple=True)[0].item()
+                    sep_ind = (batch["input_ids"][b] == tokenizer.encode(tokenizer.sep_token, add_special_tokens=False)[0]).nonzero(as_tuple=True)[0].item()
+                    for seq_ind1 in range(attentions.size()[-1]):
+                        for seq_ind2 in range(attentions.size()[-1]):
+                            if seq_ind1 == sep_ind or seq_ind2 == sep_ind or seq_ind1 == 0 or seq_ind2 == 0:
+                                attentions[:, b, :, seq_ind1, seq_ind2] = 0
 
-#             maxes = torch.amax(attentions, dim=(3, 4))
-#             sums = torch.sum(maxes, dim=1)
-#             torch.add(all_attentions, sums, out=all_attentions)
+                maxes = torch.amax(attentions, dim=(3, 4))
+                sums = torch.sum(maxes, dim=1)
+                torch.add(all_attentions, sums, out=all_attentions)
 
             logits = outputs.logits
             choice_ids = []
@@ -278,33 +305,44 @@ def evaluate(args, model, tokenizer, eval_dataset, num_heads_disabled=None):
                 max_ind = torch.argmax(probs)
                 all_preds.append(choice_lists[max_ind][i])
 
-    torch.div(all_attentions, len(eval_dataloader) * args.per_device_eval_batch_size, out=all_attentions)
-    return all_answers, all_preds, all_attentions
+    output = (all_answers, all_preds)
+    if output_confidence:
+        torch.div(all_attentions, len(eval_dataloader) * args.per_device_eval_batch_size, out=all_attentions)
+        output += (all_attentions,)
+
+    print(len(output))
+    print(output[-1])
+    return output
 
 
-args = get_args()
-transformers.set_seed(args.seed)
+def main():
+    args = get_args()
+    transformers.set_seed(args.seed)
 
-logger.info("Loading model.")
-if "t5" in args.model_name_or_path.lower():
-    model = transformers.T5ForConditionalGeneration.from_pretrained(args.model_name_or_path).to(args.device)
-    tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
-    tokenizer.mask_token = "<extra_id_0>"
-elif "gpt" in args.model_name_or_path.lower():
-    raise NotImplementedError
-    # model = transformers.AutoModelForMaskedLM.from_pretrained(args.model_name_or_path)#.cuda()
-    # args.per_device_eval_batch_size = 1
-    # tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
-    # tokenizer.mask_token = "[MASK]"
-else:
-    model = transformers.AutoModelForMaskedLM.from_pretrained(args.model_name_or_path).to(args.device)
-    tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
+    logger.info("Loading model.")
+    if "t5" in args.model_name_or_path.lower():
+        model = transformers.T5ForConditionalGeneration.from_pretrained(args.model_name_or_path).to(args.device)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
+        tokenizer.mask_token = "<extra_id_0>"
+    elif "gpt" in args.model_name_or_path.lower():
+        raise NotImplementedError
+        # model = transformers.AutoModelForMaskedLM.from_pretrained(args.model_name_or_path)#.cuda()
+        # args.per_device_eval_batch_size = 1
+        # tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
+        # tokenizer.mask_token = "[MASK]"
+    else:
+        model = transformers.AutoModelForMaskedLM.from_pretrained(args.model_name_or_path).to(args.device)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
 
 
-eval_questions, eval_choices, eval_answer_ids = get_data(args.data_path, args.sample_eval, args.num_choices)
-AgeDataset = RoBERTaDataset if any(prefix in args.model_name_or_path.lower() for prefix in ("roberta", "bart", "distil", "electra", "t5")) else BERTDataset
-eval_dataset = AgeDataset(eval_questions, eval_choices, eval_answer_ids, tokenizer, args.max_seq_length)
+    eval_questions, eval_choices, eval_answer_ids = get_data(args.data_path, args.sample_eval, args.num_choices)
+    AgeDataset = RoBERTaDataset if any(prefix in args.model_name_or_path.lower() for prefix in ("roberta", "bart", "distil", "electra", "t5")) else BERTDataset
+    eval_dataset = AgeDataset(eval_questions, eval_choices, eval_answer_ids, tokenizer, args.max_seq_length)
 
-all_answers, all_preds, all_attentions = evaluate(args, model, tokenizer, eval_dataset)
+    all_answers, all_preds = evaluate(args, model, tokenizer, eval_dataset, output_confidence=True)[:2]  # tuple: answers, preds, (confidence)
 
-logger.info(f"Accuracy: {(np.array(all_answers) == np.array(all_preds)).mean()}")
+    logger.info(f"Accuracy: {(np.array(all_answers) == np.array(all_preds)).mean()}")
+
+
+if __name__ == "__main__":
+    main()
