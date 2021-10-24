@@ -1,0 +1,74 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.12.5
+    framework: huggingface
+    huggingface_version: 4.5.1
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    python_version: 3.8.10
+    start_time: 1635115988
+    t:
+      1:
+      - 1
+      - 11
+      2:
+      - 1
+      - 11
+      3:
+      - 13
+      4: 3.8.10
+      5: 0.12.5
+      6: 4.5.1
+      8:
+      - 5
+device:
+  desc: null
+  value: cuda
+eval_data_path:
+  desc: null
+  value: data/antonym_synonym_negation_dev.jsonl
+gradient_accumulation_steps:
+  desc: null
+  value: 2
+learning_rate:
+  desc: null
+  value: 5.0e-07
+max_seq_length:
+  desc: null
+  value: 25
+model_name_or_path:
+  desc: null
+  value: bert-base-uncased
+num_choices:
+  desc: null
+  value: 2
+num_train_epochs:
+  desc: null
+  value: 5
+per_device_eval_batch_size:
+  desc: null
+  value: 64
+per_device_train_batch_size:
+  desc: null
+  value: 32
+sample_eval:
+  desc: null
+  value: -1
+sample_train:
+  desc: null
+  value: -1
+seed:
+  desc: null
+  value: 123
+train_data_path:
+  desc: null
+  value: data/antonym_synonym_negation_train.jsonl
+warmup_ratio:
+  desc: null
+  value: 0.06
+weight_decay:
+  desc: null
+  value: 0.1

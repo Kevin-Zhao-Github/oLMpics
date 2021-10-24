@@ -70,17 +70,17 @@ def get_args():
     )
     parser.add_argument(
         "--per_device_train_batch_size",
-        default=8,
+        default=32,
         type=int,
     )
     parser.add_argument(
         "--per_device_eval_batch_size",
-        default=8,
+        default=64,
         type=int,
     )
     parser.add_argument(
         "--gradient_accumulation_steps",
-        default=2,
+        default=1,
         type=int,
     )
     parser.add_argument(
@@ -110,7 +110,7 @@ def get_args():
     )
     parser.add_argument(
         "--sample_train",
-        default=1600,
+        default=-1,
         type=int,
         help="Number of examples (not batches) to evaluate on, \
         default of -1 evaluates on entire dataset"
@@ -271,7 +271,8 @@ def evaluate(args, model, tokenizer, eval_dataset):
     assert len(MASK_ID) == 1
     MASK_ID = MASK_ID[0]
     if "t5" in args.model_name_or_path.lower():
-        assert False
+        LABELS = tokenizer("<extra_id_0>", add_special_tokens=False, return_tensors="pt")
+        LABELS = LABELS.input_ids.to(args.device)
 
     all_answers = []
     all_preds = []
@@ -290,24 +291,37 @@ def evaluate(args, model, tokenizer, eval_dataset):
             batch[key] = torch.stack(batch[key], dim=-1).to(args.device)
 
         with torch.no_grad():
-            outputs = model(**batch)
+            if "t5" not in args.model_name_or_path.lower():
+                outputs = model(**batch)
+            else:
+                BATCH_LABELS = LABELS.repeat(batch_len, 1)
+                outputs = model(input_ids=batch["input_ids"], labels=BATCH_LABELS)
 
             logits = outputs.logits
             choice_ids = []
 
             for i, logit in enumerate(logits):  # Assuming all are single tokens
                 choice_ids = torch.tensor([tokenizer.encode(" " + choice_lists[j][i], add_special_tokens=False)[0] for j in range(len(choice_lists))])
-                probs = logit[0].index_select(0, choice_ids).to(args.device)
+                if "t5" in args.model_name_or_path.lower():
+                    probs = logit[0].index_select(0, choice_ids.to(args.device))
+                else:
+                    MASK_INDEX = batch["input_ids"][i].tolist().index(MASK_ID)
+                    probs = logit[MASK_INDEX].index_select(0, choice_ids.to(args.device))
 
                 max_ind = torch.argmax(probs)
                 all_preds.append(choice_lists[max_ind][i])
 
-    return (all_answers, all_preds)
+    return (np.array(all_answers) == np.array(all_preds)).mean()
 
 
-def train(args, model, tokenizer, train_dataset):
-    # all_answers, all_preds = evaluate(args, model, tokenizer, train_dataset)
-    # print(f"Initial Score: {(np.array(all_answers) == np.array(all_preds)).mean()}")
+def train(args, model, tokenizer, train_dataset, eval_dataset):
+    """
+    eval_acc = evaluate(args, model, tokenizer, eval_dataset)
+    logger.info(f"Initial Eval Accuracy: {eval_acc}")
+    train_acc = evaluate(args, model, tokenizer, train_dataset)
+    logger.info(f"Initial Train Accuracy: {train_acc}")
+    wandb.log({"eval_acc": eval_acc, "train_acc": train_acc})
+    """
 
     train_sampler = RandomSampler(train_dataset)
     train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.per_device_train_batch_size)
@@ -339,13 +353,20 @@ def train(args, model, tokenizer, train_dataset):
             for key in batch:
                 batch[key] = torch.stack(batch[key], dim=-1).to(args.device)
 
-            MASK_INDEX = batch["input_ids"][0].tolist().index(MASK_ID)
-            # labels = torch.full((batch["input_ids"].size()[:2]), -100, device=args.device)
-            labels = batch["input_ids"].detach().clone()
-            for i, curr_answer in enumerate(curr_answers):
-                MASK_INDEX = batch["input_ids"][i].tolist().index(MASK_ID)# - 1
-                assert len(tokenizer.encode(" " + curr_answer, add_special_tokens=False)) == 1
-                labels[i][MASK_INDEX] = tokenizer.encode(" " + curr_answer, add_special_tokens=False)[0]
+            if "t5" not in args.model_name_or_path.lower():
+                MASK_INDEX = batch["input_ids"][0].tolist().index(MASK_ID)
+                labels = torch.full((batch["input_ids"].size()[:2]), -100, device=args.device)
+                # labels = batch["input_ids"].detach().clone()
+                for i, curr_answer in enumerate(curr_answers):
+                    MASK_INDEX = batch["input_ids"][i].tolist().index(MASK_ID)
+                    assert len(tokenizer.encode(" " + curr_answer, add_special_tokens=False)) == 1
+                    labels[i][MASK_INDEX] = tokenizer.encode(" " + curr_answer, add_special_tokens=False)[0]
+            else:
+                labels = []
+                for i, curr_answer in enumerate(curr_answers):
+                    labels += tokenizer.encode(f"<extra_id_0> {curr_answer} <extra_id_1>", return_tensors="pt")
+
+                labels = torch.stack(labels, dim=0).to(args.device)
 
             outputs = model(**batch, labels=labels)
 
@@ -355,24 +376,27 @@ def train(args, model, tokenizer, train_dataset):
             optimizer.step()
             scheduler.step()
 
-        all_answers, all_preds = evaluate(args, model, tokenizer, train_dataset)
-        acc = (np.array(all_answers) == np.array(all_preds)).mean()
-        wandb.log({"train_acc": acc})
-        logger.info(f"Score: {acc}")
+        eval_acc = evaluate(args, model, tokenizer, eval_dataset)
+        logger.info(f"{epoch}th Eval Accuracy: {eval_acc}")
+        train_acc = evaluate(args, model, tokenizer, train_dataset)
+        logger.info(f"{epoch}th Train Accuracy: {train_acc}")
+        wandb.log({"eval_acc": eval_acc, "train_acc": train_acc})
 
     return True
 
 
 def main():
     args = get_args()
-    wandb.init(project="oLMpics", entity="frostbyte")
-    wandb.config = args
+    wandb.init(project="oLMpics", entity="frostbyte", name=f"{args.model_name_or_path}_{args.train_data_path[5:-6]}")
+    wandb.config.update(args)
 
     transformers.set_seed(args.seed)
 
     logger.info("Loading model.")
     if "t5" in args.model_name_or_path.lower():
-        raise NotImplementedError
+        model = transformers.T5ForConditionalGeneration.from_pretrained(args.model_name_or_path).to(args.device)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
+        tokenizer.mask_token = "<extra_id_0>"
     elif "gpt" in args.model_name_or_path.lower():
         raise NotImplementedError
     else:
@@ -388,18 +412,13 @@ def main():
 
     train_dataset = AgeDataset(train_questions, train_choices, train_answer_ids, tokenizer, args.max_seq_length)
     eval_dataset = AgeDataset(eval_questions, eval_choices, eval_answer_ids, tokenizer, args.max_seq_length)
+    """
+    temp = train_dataset
+    train_dataset = eval_dataset
+    eval_dataset = temp
+    """
 
-    # all_answers, all_preds = evaluate(args, model, tokenizer, eval_dataset)
-    # acc = (np.array(all_answers) == np.array(all_preds)).mean()
-    # wandb.log({"eval_acc": acc})
-    # logger.info(f"Accuracy: {acc}")
-
-    train(args, model, tokenizer, train_dataset)
-
-    all_answers, all_preds = evaluate(args, model, tokenizer, eval_dataset)
-    acc = (np.array(all_answers) == np.array(all_preds)).mean()
-    wandb.log({"eval_acc": acc})
-    logger.info(f"Accuracy: {acc}")
+    train(args, model, tokenizer, train_dataset, eval_dataset)
 
 
 if __name__ == "__main__":
