@@ -245,7 +245,7 @@ class RoBERTaDataset(Dataset):
         }
 
 
-def evaluate(args, model, tokenizer, eval_dataset):
+def evaluate(args, model, tokenizer, eval_dataset, is_train=False):
     """
     Args:
         args:
@@ -276,26 +276,46 @@ def evaluate(args, model, tokenizer, eval_dataset):
 
     all_answers = []
     all_preds = []
+    eval_loss = 0
 
     for batch in eval_dataloader:
         model.eval()
 
+        curr_answers = []
         # batch["choice_list"] is [num_choices, batch_size]
         for i in range(len(batch["choice_list"][0])):
-            all_answers.append(batch["choice_list"][batch["answer_id"][i]][i])
+            curr_answers.append(batch["choice_list"][batch["answer_id"][i]][i])
 
+        all_answers.extend(curr_answers)
         choice_lists = batch.pop("choice_list")
         batch_len = len(batch["answer_id"])
         del batch["answer_id"]
         for key in batch:
             batch[key] = torch.stack(batch[key], dim=-1).to(args.device)
 
+        if "t5" not in args.model_name_or_path.lower():
+            MASK_INDEX = batch["input_ids"][0].tolist().index(MASK_ID)
+            labels = torch.full((batch["input_ids"].size()[:2]), -100, device=args.device)
+            # labels = batch["input_ids"].detach().clone()
+            for i, curr_answer in enumerate(curr_answers):
+                MASK_INDEX = batch["input_ids"][i].tolist().index(MASK_ID)
+                assert len(tokenizer.encode(" " + curr_answer, add_special_tokens=False)) == 1
+                labels[i][MASK_INDEX] = tokenizer.encode(" " + curr_answer, add_special_tokens=False)[0]
+        # else:
+        #     labels = []
+        #     for i, curr_answer in enumerate(curr_answers):
+        #         labels += tokenizer.encode(f"<extra_id_0> {curr_answer} <extra_id_1>", return_tensors="pt")
+
+        #     labels = torch.stack(labels, dim=0).to(args.device)
+
         with torch.no_grad():
             if "t5" not in args.model_name_or_path.lower():
-                outputs = model(**batch)
+                outputs = model(**batch, labels=labels)
             else:
                 BATCH_LABELS = LABELS.repeat(batch_len, 1)
                 outputs = model(input_ids=batch["input_ids"], labels=BATCH_LABELS)
+
+            eval_loss += outputs.loss
 
             logits = outputs.logits
             choice_ids = []
@@ -311,17 +331,21 @@ def evaluate(args, model, tokenizer, eval_dataset):
                 max_ind = torch.argmax(probs)
                 all_preds.append(choice_lists[max_ind][i])
 
+    eval_loss /= len(eval_dataset)
+    if is_train:
+        wandb.log({"avg_train_loss": eval_loss})
+    else:
+        wandb.log({"avg_eval_loss": eval_loss})
+
     return (np.array(all_answers) == np.array(all_preds)).mean()
 
 
 def train(args, model, tokenizer, train_dataset, eval_dataset):
-    """
     eval_acc = evaluate(args, model, tokenizer, eval_dataset)
     logger.info(f"Initial Eval Accuracy: {eval_acc}")
-    train_acc = evaluate(args, model, tokenizer, train_dataset)
+    train_acc = evaluate(args, model, tokenizer, train_dataset, is_train=True)
     logger.info(f"Initial Train Accuracy: {train_acc}")
     wandb.log({"eval_acc": eval_acc, "train_acc": train_acc})
-    """
 
     train_sampler = RandomSampler(train_dataset)
     train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.per_device_train_batch_size)
@@ -371,14 +395,14 @@ def train(args, model, tokenizer, train_dataset, eval_dataset):
             outputs = model(**batch, labels=labels)
 
             loss = outputs.loss
-            wandb.log({"loss": loss})
+            wandb.log({"train_loss": loss})
             loss.backward()
             optimizer.step()
             scheduler.step()
 
         eval_acc = evaluate(args, model, tokenizer, eval_dataset)
         logger.info(f"{epoch}th Eval Accuracy: {eval_acc}")
-        train_acc = evaluate(args, model, tokenizer, train_dataset)
+        train_acc = evaluate(args, model, tokenizer, train_dataset, is_train=True)
         logger.info(f"{epoch}th Train Accuracy: {train_acc}")
         wandb.log({"eval_acc": eval_acc, "train_acc": train_acc})
 
