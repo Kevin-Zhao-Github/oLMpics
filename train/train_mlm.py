@@ -201,7 +201,7 @@ def get_data(file_path, sample, num_choices):
 class BERTDataset(Dataset):
     """ Dataset with token_type_ids (used for BERT, ALBERT) """
     def __init__(self, questions, choices, answer_ids, tokenizer, max_length):
-        out = tokenizer(questions, max_length=max_length, padding="max_length")
+        out = tokenizer(questions, max_length=max_length, padding="max_length", truncation=True)
         self.input_ids = out["input_ids"]
         self.token_type_ids = out["token_type_ids"]
         self.attention_mask = out["attention_mask"]
@@ -226,7 +226,7 @@ class RoBERTaDataset(Dataset):
     """ Dataset without token_type_ids (used for RoBERTa, BART, Distil, ELECTRA, T5) """
     def __init__(self, questions, choices, answer_ids, tokenizer, max_length):
         questions = [question.replace('[MASK]', tokenizer.mask_token) for question in questions]
-        out = tokenizer(questions, max_length=max_length, padding="max_length")
+        out = tokenizer(questions, max_length=max_length, padding="max_length", truncation=True)
         self.input_ids = out["input_ids"]
         self.attention_mask = out["attention_mask"]
         self.questions = questions
@@ -301,19 +301,19 @@ def evaluate(args, model, tokenizer, eval_dataset, is_train=False):
                 MASK_INDEX = batch["input_ids"][i].tolist().index(MASK_ID)
                 assert len(tokenizer.encode(" " + curr_answer, add_special_tokens=False)) == 1
                 labels[i][MASK_INDEX] = tokenizer.encode(" " + curr_answer, add_special_tokens=False)[0]
-        # else:
-        #     labels = []
-        #     for i, curr_answer in enumerate(curr_answers):
-        #         labels += tokenizer.encode(f"<extra_id_0> {curr_answer} <extra_id_1>", return_tensors="pt")
+        else:
+            labels = []
+            for i, curr_answer in enumerate(curr_answers):
+                labels += tokenizer.encode(f"<extra_id_0> {curr_answer} <extra_id_1>", return_tensors="pt")
 
-        #     labels = torch.stack(labels, dim=0).to(args.device)
+            labels = torch.stack(labels, dim=0).to(args.device)
 
         with torch.no_grad():
-            if "t5" not in args.model_name_or_path.lower():
-                outputs = model(**batch, labels=labels)
-            else:
-                BATCH_LABELS = LABELS.repeat(batch_len, 1)
-                outputs = model(input_ids=batch["input_ids"], labels=BATCH_LABELS)
+            # if "t5" not in args.model_name_or_path.lower():
+            outputs = model(**batch, labels=labels)
+            # else:
+            #     BATCH_LABELS = LABELS.repeat(batch_len, 1)
+            #     outputs = model(input_ids=batch["input_ids"], labels=BATCH_LABELS)
 
             eval_loss += outputs.loss
 
