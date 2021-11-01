@@ -99,6 +99,10 @@ def get_args():
         type=float,
     )
     parser.add_argument(
+        "--no_dropout",
+        action="store_true"
+    )
+    parser.add_argument(
         "--warmup_ratio",
         default=0.06,
         type=float,
@@ -122,7 +126,12 @@ def get_args():
         help="Number of examples (not batches) to evaluate on, \
         default of -1 evaluates on entire dataset"
     )
-
+    parser.add_argument(
+        "--clip",
+        default=1,
+        type=float,
+        help="Argument for gradient clipping, -1 means no clipping"
+    )
     parser.add_argument(
         "--device",
         default="cuda" if torch.cuda.is_available() else "cpu"
@@ -271,8 +280,9 @@ def evaluate(args, model, tokenizer, eval_dataset, is_train=False):
     assert len(MASK_ID) == 1
     MASK_ID = MASK_ID[0]
     if "t5" in args.model_name_or_path.lower():
-        LABELS = tokenizer("<extra_id_0>", add_special_tokens=False, return_tensors="pt")
-        LABELS = LABELS.input_ids.to(args.device)
+        # LABELS = tokenizer("<extra_id_0>", add_special_tokens=False, return_tensors="pt") # equivalent to "<pad> <extra_id_0>" for decoder_input_ids
+        # LABELS = LABELS.input_ids.to(args.device)
+        decoder_ids = tokenizer("<pad> <extra_id_0>", add_special_tokens=False, return_tensors="pt").input_ids.to(args.device)
 
     all_answers = []
     all_preds = []
@@ -309,13 +319,11 @@ def evaluate(args, model, tokenizer, eval_dataset, is_train=False):
             labels = torch.stack(labels, dim=0).to(args.device)
 
         with torch.no_grad():
-            # if "t5" not in args.model_name_or_path.lower():
             outputs = model(**batch, labels=labels)
-            # else:
-            #     BATCH_LABELS = LABELS.repeat(batch_len, 1)
-            #     outputs = model(input_ids=batch["input_ids"], labels=BATCH_LABELS)
-
             eval_loss += outputs.loss
+
+            if "t5" in args.model_name_or_path.lower():
+                outputs = model(**batch, decoder_input_ids=decoder_ids.repeat(batch_len, 1))
 
             logits = outputs.logits
             choice_ids = []
@@ -323,7 +331,8 @@ def evaluate(args, model, tokenizer, eval_dataset, is_train=False):
             for i, logit in enumerate(logits):  # Assuming all are single tokens
                 choice_ids = torch.tensor([tokenizer.encode(" " + choice_lists[j][i], add_special_tokens=False)[0] for j in range(len(choice_lists))])
                 if "t5" in args.model_name_or_path.lower():
-                    probs = logit[0].index_select(0, choice_ids.to(args.device))
+                    # probs = logit[0].index_select(0, choice_ids.to(args.device))
+                    probs = logit[1].index_select(0, choice_ids.to(args.device))
                 else:
                     MASK_INDEX = batch["input_ids"][i].tolist().index(MASK_ID)
                     probs = logit[MASK_INDEX].index_select(0, choice_ids.to(args.device))
@@ -356,15 +365,19 @@ def train(args, model, tokenizer, train_dataset, eval_dataset):
     train_dataloader = tqdm(train_dataloader, desc="Training", leave=False)
 
     optimizer = transformers.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
-    scheduler = transformers.get_linear_schedule_with_warmup(optimizer, len(train_dataloader) * args.num_train_epochs * args.warmup_ratio, len(train_dataloader) * args.num_train_epochs )
+    scheduler = transformers.get_linear_schedule_with_warmup(optimizer, len(train_dataloader) * args.num_train_epochs // args.gradient_accumulation_steps * args.warmup_ratio, len(train_dataloader) * args.num_train_epochs // args.gradient_accumulation_steps)
 
     MASK_ID = tokenizer.encode(tokenizer.mask_token, add_special_tokens=False)
     assert len(MASK_ID) == 1
     MASK_ID = MASK_ID[0]
+    accumulated_loss = torch.tensor(0.0).to(args.device)
 
     for epoch in tqdm(range(args.num_train_epochs)):
-        for batch in train_dataloader:
-            model.train()
+        for step, batch in enumerate(train_dataloader):
+            if args.no_dropout:
+                model.eval()
+            else:
+                model.train()
 
             # batch["choice_list"] is [num_choices, batch_size]
             curr_answers = []
@@ -395,10 +408,17 @@ def train(args, model, tokenizer, train_dataset, eval_dataset):
             outputs = model(**batch, labels=labels)
 
             loss = outputs.loss
-            wandb.log({"train_loss": loss})
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
+            accumulated_loss += float(loss)
+            if step + 1 % args.gradient_accumulation_steps == 0:
+                wandb.log({"train_loss": accumulated_loss.item})
+                loss.backward()
+                if args.clip > 0:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
+
+                optimizer.step()
+                scheduler.step()
+                model.zero_grad()
+                accumulated_loss = torch.tensor(0.0).to(args.device)
 
         eval_acc = evaluate(args, model, tokenizer, eval_dataset)
         logger.info(f"{epoch}th Eval Accuracy: {eval_acc}")
@@ -411,7 +431,8 @@ def train(args, model, tokenizer, train_dataset, eval_dataset):
 
 def main():
     args = get_args()
-    wandb.init(project="oLMpics", entity="frostbyte", name=f"{args.model_name_or_path}_{args.train_data_path[5:-6]}")
+    wandb.init(project="oLMpics", entity="frostbyte", group="Post_Oct31", \
+               name=f"{args.model_name_or_path}_{args.train_data_path[5:-6]}")
     wandb.config.update(args)
 
     transformers.set_seed(args.seed)
@@ -427,7 +448,7 @@ def main():
         model = transformers.AutoModelForMaskedLM.from_pretrained(args.model_name_or_path).to(args.device)
         tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
 
-
+    wandb.watch(model)
     train_questions, train_choices, train_answer_ids = get_data(args.train_data_path, args.sample_train, args.num_choices)
     eval_questions, eval_choices, eval_answer_ids = get_data(args.eval_data_path, args.sample_eval, args.num_choices)
 
