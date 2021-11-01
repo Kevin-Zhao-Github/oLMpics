@@ -9,10 +9,15 @@ MODELS=('bert-base-uncased' 'distilbert-base-uncased' 'bert-large-uncased' 'bert
 for seed in 123; do
     for i in "${!TRAIN_DATA[@]}"; do
         for model in "${MODELS[@]}"; do
+            if [[ "$model" == *"t5"* || "$model" == *"albert"* ]]; then
+                if [[ "$i" -eq 3 ]]; then
+                    continue
+                fi
+            fi
             python train_mlm.py $model "data/${TRAIN_DATA[i]}" "data/${EVAL_DATA[i]}" "${NUM_CHOICES[i]}" \
-            --gradient_accumulation_steps 2 \
-            --learning_rate 0.5e-6 \
+            --learning_rate 5e-5 \
             --num_train_epochs 5
+        break
         done
     done
 done
