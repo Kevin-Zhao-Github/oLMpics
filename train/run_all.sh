@@ -7,8 +7,8 @@ NUM_CHOICES=(2 5 3 3 2 2)
 MODELS=('bert-base-uncased' 'distilbert-base-uncased' 'bert-large-uncased' 'bert-large-uncased-whole-word-masking' 'roberta-base' 'roberta-large' 'facebook/bart-large' 't5-base' 'albert-large-v1')
 
 for seed in 123; do
-    for i in "${!TRAIN_DATA[@]}"; do
-        for model in "${MODELS[@]}"; do
+    for model in "${MODELS[@]}"; do
+        for i in "${!TRAIN_DATA[@]}"; do
             if [[ "$model" == *"t5"* || "$model" == *"albert"* ]]; then
                 if [[ "$i" -eq 3 ]]; then
                     continue
