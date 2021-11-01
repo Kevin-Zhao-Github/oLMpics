@@ -17,7 +17,6 @@ for seed in 123; do
             python train_mlm.py $model "data/${TRAIN_DATA[i]}" "data/${EVAL_DATA[i]}" "${NUM_CHOICES[i]}" \
             --learning_rate 5e-5 \
             --num_train_epochs 5
-        break
         done
     done
 done

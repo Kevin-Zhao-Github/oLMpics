@@ -410,7 +410,7 @@ def train(args, model, tokenizer, train_dataset, eval_dataset):
             loss = outputs.loss
             accumulated_loss += float(loss)
             if step + 1 % args.gradient_accumulation_steps == 0:
-                wandb.log({"train_loss": accumulated_loss.item})
+                wandb.log({"train_loss": accumulated_loss.item()})
                 loss.backward()
                 if args.clip > 0:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
@@ -448,7 +448,7 @@ def main():
         model = transformers.AutoModelForMaskedLM.from_pretrained(args.model_name_or_path).to(args.device)
         tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
 
-    wandb.watch(model)
+    wandb.watch(model, log_freq=50)
     train_questions, train_choices, train_answer_ids = get_data(args.train_data_path, args.sample_train, args.num_choices)
     eval_questions, eval_choices, eval_answer_ids = get_data(args.eval_data_path, args.sample_eval, args.num_choices)
 
