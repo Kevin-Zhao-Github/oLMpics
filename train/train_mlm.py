@@ -409,8 +409,9 @@ def train(args, model, tokenizer, train_dataset, eval_dataset):
 
             loss = outputs.loss
             accumulated_loss += float(loss)
-            if step + 1 % args.gradient_accumulation_steps == 0:
+            if (step + 1) % args.gradient_accumulation_steps == 0:
                 wandb.log({"train_loss": accumulated_loss.item()})
+                wandb.log({"lr": scheduler.get_last_lr()[0]})
                 loss.backward()
                 if args.clip > 0:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
@@ -431,7 +432,7 @@ def train(args, model, tokenizer, train_dataset, eval_dataset):
 
 def main():
     args = get_args()
-    wandb.init(project="oLMpics", entity="frostbyte", group="Post_Oct31", \
+    wandb.init(project="oLMpics", entity="frostbyte", group="Nov1", \
                name=f"{args.model_name_or_path}_{args.train_data_path[5:-6]}")
     wandb.config.update(args)
 

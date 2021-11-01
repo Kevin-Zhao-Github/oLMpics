@@ -9,6 +9,9 @@ MODELS=('bert-base-uncased' 'distilbert-base-uncased' 'bert-large-uncased' 'bert
 for seed in 123; do
     for model in "${MODELS[@]}"; do
         for i in "${!TRAIN_DATA[@]}"; do
+            if [[ "$model" == *"bart"* ]]; then
+                continue
+            fi
             if [[ "$model" == *"t5"* || "$model" == *"albert"* ]]; then
                 if [[ "$i" -eq 3 ]]; then
                     continue
