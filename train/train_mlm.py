@@ -70,17 +70,17 @@ def get_args():
     )
     parser.add_argument(
         "--per_device_train_batch_size",
-        default=8,
+        default=32,
         type=int,
     )
     parser.add_argument(
         "--per_device_eval_batch_size",
-        default=8,
+        default=64,
         type=int,
     )
     parser.add_argument(
         "--gradient_accumulation_steps",
-        default=2,
+        default=1,
         type=int,
     )
     parser.add_argument(
@@ -99,6 +99,10 @@ def get_args():
         type=float,
     )
     parser.add_argument(
+        "--no_dropout",
+        action="store_true"
+    )
+    parser.add_argument(
         "--warmup_ratio",
         default=0.06,
         type=float,
@@ -110,7 +114,7 @@ def get_args():
     )
     parser.add_argument(
         "--sample_train",
-        default=1600,
+        default=-1,
         type=int,
         help="Number of examples (not batches) to evaluate on, \
         default of -1 evaluates on entire dataset"
@@ -122,7 +126,12 @@ def get_args():
         help="Number of examples (not batches) to evaluate on, \
         default of -1 evaluates on entire dataset"
     )
-
+    parser.add_argument(
+        "--clip",
+        default=1,
+        type=float,
+        help="Argument for gradient clipping, -1 means no clipping"
+    )
     parser.add_argument(
         "--device",
         default="cuda" if torch.cuda.is_available() else "cpu"
@@ -201,7 +210,7 @@ def get_data(file_path, sample, num_choices):
 class BERTDataset(Dataset):
     """ Dataset with token_type_ids (used for BERT, ALBERT) """
     def __init__(self, questions, choices, answer_ids, tokenizer, max_length):
-        out = tokenizer(questions, max_length=max_length, padding="max_length")
+        out = tokenizer(questions, max_length=max_length, padding="max_length", truncation=True)
         self.input_ids = out["input_ids"]
         self.token_type_ids = out["token_type_ids"]
         self.attention_mask = out["attention_mask"]
@@ -226,7 +235,7 @@ class RoBERTaDataset(Dataset):
     """ Dataset without token_type_ids (used for RoBERTa, BART, Distil, ELECTRA, T5) """
     def __init__(self, questions, choices, answer_ids, tokenizer, max_length):
         questions = [question.replace('[MASK]', tokenizer.mask_token) for question in questions]
-        out = tokenizer(questions, max_length=max_length, padding="max_length")
+        out = tokenizer(questions, max_length=max_length, padding="max_length", truncation=True)
         self.input_ids = out["input_ids"]
         self.attention_mask = out["attention_mask"]
         self.questions = questions
@@ -245,7 +254,7 @@ class RoBERTaDataset(Dataset):
         }
 
 
-def evaluate(args, model, tokenizer, eval_dataset):
+def evaluate(args, model, tokenizer, eval_dataset, is_train=False):
     """
     Args:
         args:
@@ -271,43 +280,81 @@ def evaluate(args, model, tokenizer, eval_dataset):
     assert len(MASK_ID) == 1
     MASK_ID = MASK_ID[0]
     if "t5" in args.model_name_or_path.lower():
-        assert False
+        # LABELS = tokenizer("<extra_id_0>", add_special_tokens=False, return_tensors="pt") # equivalent to "<pad> <extra_id_0>" for decoder_input_ids
+        # LABELS = LABELS.input_ids.to(args.device)
+        decoder_ids = tokenizer("<pad> <extra_id_0>", add_special_tokens=False, return_tensors="pt").input_ids.to(args.device)
 
     all_answers = []
     all_preds = []
+    eval_loss = 0
 
     for batch in eval_dataloader:
         model.eval()
 
+        curr_answers = []
         # batch["choice_list"] is [num_choices, batch_size]
         for i in range(len(batch["choice_list"][0])):
-            all_answers.append(batch["choice_list"][batch["answer_id"][i]][i])
+            curr_answers.append(batch["choice_list"][batch["answer_id"][i]][i])
 
+        all_answers.extend(curr_answers)
         choice_lists = batch.pop("choice_list")
         batch_len = len(batch["answer_id"])
         del batch["answer_id"]
         for key in batch:
             batch[key] = torch.stack(batch[key], dim=-1).to(args.device)
 
+        if "t5" not in args.model_name_or_path.lower():
+            MASK_INDEX = batch["input_ids"][0].tolist().index(MASK_ID)
+            labels = torch.full((batch["input_ids"].size()[:2]), -100, device=args.device)
+            # labels = batch["input_ids"].detach().clone()
+            for i, curr_answer in enumerate(curr_answers):
+                MASK_INDEX = batch["input_ids"][i].tolist().index(MASK_ID)
+                assert len(tokenizer.encode(" " + curr_answer, add_special_tokens=False)) == 1
+                labels[i][MASK_INDEX] = tokenizer.encode(" " + curr_answer, add_special_tokens=False)[0]
+        else:
+            labels = []
+            for i, curr_answer in enumerate(curr_answers):
+                labels += tokenizer.encode(f"<extra_id_0> {curr_answer} <extra_id_1>", return_tensors="pt")
+
+            labels = torch.stack(labels, dim=0).to(args.device)
+
         with torch.no_grad():
-            outputs = model(**batch)
+            outputs = model(**batch, labels=labels)
+            eval_loss += outputs.loss
+
+            if "t5" in args.model_name_or_path.lower():
+                outputs = model(**batch, decoder_input_ids=decoder_ids.repeat(batch_len, 1))
 
             logits = outputs.logits
             choice_ids = []
 
             for i, logit in enumerate(logits):  # Assuming all are single tokens
                 choice_ids = torch.tensor([tokenizer.encode(" " + choice_lists[j][i], add_special_tokens=False)[0] for j in range(len(choice_lists))])
-                probs = logit[0].index_select(0, choice_ids).to(args.device)
+                if "t5" in args.model_name_or_path.lower():
+                    # probs = logit[0].index_select(0, choice_ids.to(args.device))
+                    probs = logit[1].index_select(0, choice_ids.to(args.device))
+                else:
+                    MASK_INDEX = batch["input_ids"][i].tolist().index(MASK_ID)
+                    probs = logit[MASK_INDEX].index_select(0, choice_ids.to(args.device))
 
                 max_ind = torch.argmax(probs)
                 all_preds.append(choice_lists[max_ind][i])
 
-    return (all_answers, all_preds)
+    eval_loss /= len(eval_dataset)
+    if is_train:
+        wandb.log({"avg_train_loss": eval_loss})
+    else:
+        wandb.log({"avg_eval_loss": eval_loss})
+
+    return (np.array(all_answers) == np.array(all_preds)).mean()
 
 
-def train(args, model, tokenizer, train_dataset):
-    # all_answers, all_preds = evaluate(args, model, tokenizer, train_dataset)
-    # print(f"Initial Score: {(np.array(all_answers) == np.array(all_preds)).mean()}")
+def train(args, model, tokenizer, train_dataset, eval_dataset):
+    eval_acc = evaluate(args, model, tokenizer, eval_dataset)
+    logger.info(f"Initial Eval Accuracy: {eval_acc}")
+    train_acc = evaluate(args, model, tokenizer, train_dataset, is_train=True)
+    logger.info(f"Initial Train Accuracy: {train_acc}")
+    wandb.log({"eval_acc": eval_acc, "train_acc": train_acc})
 
     train_sampler = RandomSampler(train_dataset)
     train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.per_device_train_batch_size)
@@ -318,15 +365,19 @@ def train(args, model, tokenizer, train_dataset):
     train_dataloader = tqdm(train_dataloader, desc="Training", leave=False)
 
     optimizer = transformers.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
-    scheduler = transformers.get_linear_schedule_with_warmup(optimizer, len(train_dataloader) * args.num_train_epochs * args.warmup_ratio, len(train_dataloader) * args.num_train_epochs )
+    scheduler = transformers.get_linear_schedule_with_warmup(optimizer, len(train_dataloader) * args.num_train_epochs // args.gradient_accumulation_steps * args.warmup_ratio, len(train_dataloader) * args.num_train_epochs // args.gradient_accumulation_steps)
 
     MASK_ID = tokenizer.encode(tokenizer.mask_token, add_special_tokens=False)
     assert len(MASK_ID) == 1
     MASK_ID = MASK_ID[0]
+    accumulated_loss = torch.tensor(0.0).to(args.device)
 
     for epoch in tqdm(range(args.num_train_epochs)):
-        for batch in train_dataloader:
-            model.train()
+        for step, batch in enumerate(train_dataloader):
+            if args.no_dropout:
+                model.eval()
+            else:
+                model.train()
 
             # batch["choice_list"] is [num_choices, batch_size]
             curr_answers = []
@@ -339,47 +390,66 @@ def train(args, model, tokenizer, train_dataset):
             for key in batch:
                 batch[key] = torch.stack(batch[key], dim=-1).to(args.device)
 
-            MASK_INDEX = batch["input_ids"][0].tolist().index(MASK_ID)
-            # labels = torch.full((batch["input_ids"].size()[:2]), -100, device=args.device)
-            labels = batch["input_ids"].detach().clone()
-            for i, curr_answer in enumerate(curr_answers):
-                MASK_INDEX = batch["input_ids"][i].tolist().index(MASK_ID)# - 1
-                assert len(tokenizer.encode(" " + curr_answer, add_special_tokens=False)) == 1
-                labels[i][MASK_INDEX] = tokenizer.encode(" " + curr_answer, add_special_tokens=False)[0]
+            if "t5" not in args.model_name_or_path.lower():
+                MASK_INDEX = batch["input_ids"][0].tolist().index(MASK_ID)
+                labels = torch.full((batch["input_ids"].size()[:2]), -100, device=args.device)
+                # labels = batch["input_ids"].detach().clone()
+                for i, curr_answer in enumerate(curr_answers):
+                    MASK_INDEX = batch["input_ids"][i].tolist().index(MASK_ID)
+                    assert len(tokenizer.encode(" " + curr_answer, add_special_tokens=False)) == 1
+                    labels[i][MASK_INDEX] = tokenizer.encode(" " + curr_answer, add_special_tokens=False)[0]
+            else:
+                labels = []
+                for i, curr_answer in enumerate(curr_answers):
+                    labels += tokenizer.encode(f"<extra_id_0> {curr_answer} <extra_id_1>", return_tensors="pt")
+
+                labels = torch.stack(labels, dim=0).to(args.device)
 
             outputs = model(**batch, labels=labels)
 
             loss = outputs.loss
-            wandb.log({"loss": loss})
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
+            accumulated_loss += float(loss)
+            if (step + 1) % args.gradient_accumulation_steps == 0:
+                wandb.log({"train_loss": accumulated_loss.item()})
+                wandb.log({"lr": scheduler.get_last_lr()[0]})
+                loss.backward()
+                if args.clip > 0:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
 
-        all_answers, all_preds = evaluate(args, model, tokenizer, train_dataset)
-        acc = (np.array(all_answers) == np.array(all_preds)).mean()
-        wandb.log({"train_acc": acc})
-        logger.info(f"Score: {acc}")
+                optimizer.step()
+                scheduler.step()
+                model.zero_grad()
+                accumulated_loss = torch.tensor(0.0).to(args.device)
+
+        eval_acc = evaluate(args, model, tokenizer, eval_dataset)
+        logger.info(f"{epoch}th Eval Accuracy: {eval_acc}")
+        train_acc = evaluate(args, model, tokenizer, train_dataset, is_train=True)
+        logger.info(f"{epoch}th Train Accuracy: {train_acc}")
+        wandb.log({"eval_acc": eval_acc, "train_acc": train_acc})
 
     return True
 
 
 def main():
     args = get_args()
-    wandb.init(project="oLMpics", entity="frostbyte")
-    wandb.config = args
+    wandb.init(project="oLMpics", entity="frostbyte", group="Nov1", \
+               name=f"{args.model_name_or_path}_{args.train_data_path[5:-6]}")
+    wandb.config.update(args)
 
     transformers.set_seed(args.seed)
 
     logger.info("Loading model.")
     if "t5" in args.model_name_or_path.lower():
-        raise NotImplementedError
+        model = transformers.T5ForConditionalGeneration.from_pretrained(args.model_name_or_path).to(args.device)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
+        tokenizer.mask_token = "<extra_id_0>"
     elif "gpt" in args.model_name_or_path.lower():
         raise NotImplementedError
     else:
         model = transformers.AutoModelForMaskedLM.from_pretrained(args.model_name_or_path).to(args.device)
         tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
 
-
+    wandb.watch(model, log_freq=50)
     train_questions, train_choices, train_answer_ids = get_data(args.train_data_path, args.sample_train, args.num_choices)
     eval_questions, eval_choices, eval_answer_ids = get_data(args.eval_data_path, args.sample_eval, args.num_choices)
 
@@ -388,18 +458,13 @@ def main():
 
     train_dataset = AgeDataset(train_questions, train_choices, train_answer_ids, tokenizer, args.max_seq_length)
     eval_dataset = AgeDataset(eval_questions, eval_choices, eval_answer_ids, tokenizer, args.max_seq_length)
+    """
+    temp = train_dataset
+    train_dataset = eval_dataset
+    eval_dataset = temp
+    """
 
-    # all_answers, all_preds = evaluate(args, model, tokenizer, eval_dataset)
-    # acc = (np.array(all_answers) == np.array(all_preds)).mean()
-    # wandb.log({"eval_acc": acc})
-    # logger.info(f"Accuracy: {acc}")
-
-    train(args, model, tokenizer, train_dataset)
-
-    all_answers, all_preds = evaluate(args, model, tokenizer, eval_dataset)
-    acc = (np.array(all_answers) == np.array(all_preds)).mean()
-    wandb.log({"eval_acc": acc})
-    logger.info(f"Accuracy: {acc}")
+    train(args, model, tokenizer, train_dataset, eval_dataset)
 
 
 if __name__ == "__main__":
