@@ -503,7 +503,10 @@ class T5Attention(nn.Module):
         # if self.kz_layer >= 0:
         #     torch.save(attn_weights, f"fixed-weights_{self.kz_layer}.pt")
 
-        if 5 <= self.kz_layer <= 22:
+        with open("num.txt", "r") as f:
+            threshold = f.read()
+
+        if threshold <= self.kz_layer <= 22:
             # if self.kz_layer % 2 == 1:
             # if self.kz_layer % 2 == 0:
             #     attn_weights = torch.load(f"fixed-weights_{self.kz_layer}.pt")
