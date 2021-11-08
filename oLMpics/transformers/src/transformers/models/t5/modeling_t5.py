@@ -503,12 +503,16 @@ class T5Attention(nn.Module):
         # if self.kz_layer >= 0:
         #     torch.save(attn_weights, f"fixed-weights_{self.kz_layer}.pt")
 
-        # if 5 <= self.kz_layer <= 22:
-        #     # if self.kz_layer % 2 == 1:
-        #     if self.kz_layer % 2 == 0:
-        #     #     attn_weights = torch.load(f"fixed-weights_{self.kz_layer}.pt")
-        #         attn_weights = torch.load("avg-attn-weights-5-24.pt")
-        #         attn_weights = attn_weights.repeat(batch_size, 1, 1, 1)
+        if 5 <= self.kz_layer <= 22:
+            # if self.kz_layer % 2 == 1:
+            # if self.kz_layer % 2 == 0:
+            #     attn_weights = torch.load(f"fixed-weights_{self.kz_layer}.pt")
+            attn_weights = torch.load("avg_attentions.pt")
+            attn_weights = attn_weights.repeat(batch_size, 1, 1, 1)
+
+            avg_value_norms = torch.load("avg_head_values.pt")
+            value_states_norms = torch.sum(value_states * value_states, dim=3)  # Technically square of norm
+            value_states = value_states.div(value_states_norms.div(avg_value_norms).unsqueeze(-1))  # Divide by (norm/avg_norm) = multiply by avg_norm/norm
 
         # if self.kz_layer >= 0:
         #     print(f"{self.kz_layer}: {attn_weights.size()}")
