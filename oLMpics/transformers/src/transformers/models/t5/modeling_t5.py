@@ -510,10 +510,10 @@ class T5Attention(nn.Module):
             # if self.kz_layer % 2 == 1:
             # if self.kz_layer % 2 == 0:
             #     attn_weights = torch.load(f"fixed-weights_{self.kz_layer}.pt")
-            attn_weights = torch.load("avg_attentions.pt")
+            attn_weights = torch.load("avg_attentions.pt").to(hidden_states.device)
             attn_weights = attn_weights.repeat(batch_size, 1, 1, 1)
 
-            avg_value_norms = torch.load("avg_head_values.pt")
+            avg_value_norms = torch.load("avg_head_values.pt").to(hidden_states.device)
             value_states_norms = torch.sum(value_states * value_states, dim=3)  # Technically square of norm
             value_states = value_states.div(value_states_norms.div(avg_value_norms).unsqueeze(-1))  # Divide by (norm/avg_norm) = multiply by avg_norm/norm
 
