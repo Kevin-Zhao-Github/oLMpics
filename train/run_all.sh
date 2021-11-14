@@ -4,12 +4,12 @@ TRAIN_DATA=('antonym_synonym_negation_train.jsonl' 'coffee_cats_quantifiers_trai
 EVAL_DATA=('antonym_synonym_negation_dev.jsonl' 'coffee_cats_quantifiers_dev.jsonl' 'compositional_comparison_dev.jsonl' 'hypernym_conjunction_dev.jsonl' 'number_comparison_age_compare_masked_dev.jsonl' 'size_comparison_dev.jsonl')
 NUM_CHOICES=(2 5 3 3 2 2)
 
-MODELS=('bert-base-uncased' 'distilbert-base-uncased' 'bert-large-uncased' 'bert-large-uncased-whole-word-masking' 'roberta-base' 'roberta-large' 'facebook/bart-large' 't5-base' 'albert-large-v1')
+MODELS=('facebook/bart-large' 't5-large')
 
 for seed in 123; do
     for model in "${MODELS[@]}"; do
         for i in "${!TRAIN_DATA[@]}"; do
-            if [[ "$model" == *"bart"* ]]; then
+            if [[ "$model" == *"t5"* ]]; then
                 continue
             fi
             if [[ "$model" == *"t5"* || "$model" == *"albert"* ]]; then

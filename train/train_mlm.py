@@ -304,19 +304,20 @@ def evaluate(args, model, tokenizer, eval_dataset, is_train=False):
             batch[key] = torch.stack(batch[key], dim=-1).to(args.device)
 
         if "t5" not in args.model_name_or_path.lower():
-            MASK_INDEX = batch["input_ids"][0].tolist().index(MASK_ID)
             labels = torch.full((batch["input_ids"].size()[:2]), -100, device=args.device)
-            # labels = batch["input_ids"].detach().clone()
             for i, curr_answer in enumerate(curr_answers):
                 MASK_INDEX = batch["input_ids"][i].tolist().index(MASK_ID)
                 assert len(tokenizer.encode(" " + curr_answer, add_special_tokens=False)) == 1
                 labels[i][MASK_INDEX] = tokenizer.encode(" " + curr_answer, add_special_tokens=False)[0]
         else:
-            labels = []
-            for i, curr_answer in enumerate(curr_answers):
-                labels += tokenizer.encode(f"<extra_id_0> {curr_answer} <extra_id_1>", return_tensors="pt")
+            # labels = []
+            # for i, curr_answer in enumerate(curr_answers):
+            #     labels += tokenizer.encode(f"<extra_id_0> {curr_answer} <extra_id_1>", return_tensors="pt")
+            # labels = torch.stack(labels, dim=0).to(args.device)
 
-            labels = torch.stack(labels, dim=0).to(args.device)
+            ins_answers = [f"<extra_id_0> {curr_answer} <extra_id_1>" for curr_answer in curr_answers]
+            labels = tokenizer(ins_answers, padding='longest', return_tensors="pt").input_ids.to(args.device)
+            print(batch["input_ids"].size())
 
         with torch.no_grad():
             outputs = model(**batch, labels=labels)
@@ -352,6 +353,9 @@ def evaluate(args, model, tokenizer, eval_dataset, is_train=False):
 def train(args, model, tokenizer, train_dataset, eval_dataset):
     eval_acc = evaluate(args, model, tokenizer, eval_dataset)
     logger.info(f"Initial Eval Accuracy: {eval_acc}")
+    if args.num_train_epochs == 0:
+        wandb.log({"eval_acc": eval_acc})
+        return
     train_acc = evaluate(args, model, tokenizer, train_dataset, is_train=True)
     logger.info(f"Initial Train Accuracy: {train_acc}")
     wandb.log({"eval_acc": eval_acc, "train_acc": train_acc})
@@ -432,7 +436,7 @@ def train(args, model, tokenizer, train_dataset, eval_dataset):
 
 def main():
     args = get_args()
-    wandb.init(project="oLMpics", entity="frostbyte", group="Nov1", \
+    wandb.init(project="oLMpics", entity="frostbyte", group="google-T5", \
                name=f"{args.model_name_or_path}_{args.train_data_path[5:-6]}")
     wandb.config.update(args)
 
