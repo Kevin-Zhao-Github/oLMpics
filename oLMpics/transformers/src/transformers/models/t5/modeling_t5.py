@@ -529,8 +529,8 @@ class T5Attention(nn.Module):
             # avg_value_norms = torch.load("avg_head_values.pt").to(hidden_states.device)
             avg_value_norms = torch.sum(avg_values * avg_values, dim=2).to(hidden_states.device)
             value_states_norms = torch.sum(value_states * value_states, dim=3)  # Technically square of norm
-            value_states = value_states.div(value_states_norms.div(avg_value_norms).unsqueeze(-1))  # Divide by (norm/avg_norm) = multiply by avg_norm/norm
-
+            # value_states = value_states.div(value_states_norms.div(avg_value_norms).unsqueeze(-1))  # Divide by (norm/avg_norm) = multiply by avg_norm/norm
+            value_states = value_states.div(torch.sqrt(value_states_norms.div(avg_value_norms).unsqueeze(-1)))
         # if self.kz_layer >= 0:
         #     print(f"{self.kz_layer}: {attn_weights.size()}")
         attn_weights = F.dropout(
