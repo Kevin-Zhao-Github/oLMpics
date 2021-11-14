@@ -317,7 +317,7 @@ def evaluate(args, model, tokenizer, eval_dataset, is_train=False):
            logits = outputs.logits
            choice_probs = []
 
-           assert "t5" in args.model_name_or_path.lower()
+           assert "t5" in args.model_name_or_path.lower()  # TODO: BART
 
            for k in range(len(choice_lists)):
                 probs = [0] * len(batch["input_ids"])
@@ -326,10 +326,10 @@ def evaluate(args, model, tokenizer, eval_dataset, is_train=False):
                 outputs = model(**batch, decoder_input_ids=decoder_input_ids)
                 logits = F.softmax(outputs.logits, dim=1)
 
-                for i, logit in enumerate(logits):  # Assuming all are single tokens
+                for i, logit in enumerate(logits):
                     ids = decoder_input_ids[i]
                     for j, id in enumerate(ids):
-                        if j >= 2 and id > 0:
+                        if j >= 2 and id > 0:  # ignore first 2 and final pad tokens
                             probs[i] = probs[i] + math.log(logit[j][id].cpu())
 
                 choice_probs.append(probs)
