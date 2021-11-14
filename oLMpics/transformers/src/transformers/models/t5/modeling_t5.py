@@ -504,16 +504,30 @@ class T5Attention(nn.Module):
         #     torch.save(attn_weights, f"fixed-weights_{self.kz_layer}.pt")
 
         with open("num.txt", "r") as f:
-            threshold = int(f.read().strip())
+            threshold = int(f.readline().strip())
+            average_all = f.readline().strip() == 'True'
+            max_thresh = int(f.readline().strip())
 
-        if threshold <= self.kz_layer <= 22:
+        if threshold <= self.kz_layer <= max_thresh:
             # if self.kz_layer % 2 == 1:
             # if self.kz_layer % 2 == 0:
             #     attn_weights = torch.load(f"fixed-weights_{self.kz_layer}.pt")
-            attn_weights = torch.load("avg_attentions.pt").to(hidden_states.device)
+            all_attentions = torch.load("all_attentions.pt", map_location=torch.device('cpu')).to(hidden_states.device)
+            if average_all:
+                attn_weights = torch.mean(all_attentions, dim=0).to(hidden_states.device)
+            else:
+                attn_weights = torch.mean(all_attentions[threshold:max_thresh], dim=0).to(hidden_states.device)
+
+            # attn_weights = torch.load("avg_attentions.pt").to(hidden_states.device)
             attn_weights = attn_weights.repeat(batch_size, 1, 1, 1)
 
-            avg_value_norms = torch.load("avg_head_values.pt").to(hidden_states.device)
+            all_values = torch.load("all_values.pt", map_location=torch.device('cpu')).to(hidden_states.device)
+            if average_all:
+                avg_values = torch.mean(all_values, dim=0)
+            else:
+                avg_values = torch.mean(all_values[threshold:max_thresh], dim=0).to(hidden_states.device)
+            # avg_value_norms = torch.load("avg_head_values.pt").to(hidden_states.device)
+            avg_value_norms = torch.sum(avg_values * avg_values, dim=2).to(hidden_states.device)
             value_states_norms = torch.sum(value_states * value_states, dim=3)  # Technically square of norm
             value_states = value_states.div(value_states_norms.div(avg_value_norms).unsqueeze(-1))  # Divide by (norm/avg_norm) = multiply by avg_norm/norm
 
