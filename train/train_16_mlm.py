@@ -430,7 +430,10 @@ def main():
 
     logger.info("Loading model.")
     if "t5" in args.model_name_or_path.lower():
-        model = transformers.T5ForConditionalGeneration.from_pretrained(args.model_name_or_path).to(args.device)
+        # with torch.cuda.amp.autocast():
+        # model = transformers.T5ForConditionalGeneration.from_pretrained(args.model_name_or_path)
+        # model = torch.cuda.amp.initialize(model, opt_level="O1").to(args.device)
+        model = transformers.T5ForConditionalGeneration.from_pretrained(args.model_name_or_path).half().to(args.device)
         tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
         tokenizer.mask_token = "<extra_id_0>"
     else:
