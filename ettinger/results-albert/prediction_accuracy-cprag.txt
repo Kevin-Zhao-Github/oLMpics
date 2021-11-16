@@ -1,0 +1,35 @@
+
+
+***
+MODEL: albert-large-v2
+***
+
+--
+k = 5
+--
+
+Prediction accuracies:
+EXPECTED TARGET in TOP 5 predictions: 0.29411764705882354 (10/34)
+
+ITEMS PREDICTED CORRECTLY:
+
+He caught the pass and scored another touchdown. There was nothing he enjoyed more than a good game of
+   EXPECTED: football | PREDICTED: baseball,hockey,football,.,soccer
+Rich couldn’t count the number of Yankees games he had seen with his father. They both shared a lifelong interest in
+   EXPECTED: baseball | PREDICTED: baseball,.,yankees,yankee,hockey
+Getting both himself and his car to work on the neighboring island was time-consuming. Every morning he drove for a few minutes and then boarded the
+   EXPECTED: ferry | PREDICTED: plane,ferry,flight,bus,boat
+Amy was very anxious about traveling abroad for the first time. She felt surprisingly better, however, when she actually boarded the
+   EXPECTED: plane | PREDICTED: plane,flight,bus,flights,airplane
+The day before the wedding, the kitchen was just covered with frosting. Annette’s sister was responsible for making the
+   EXPECTED: cake | PREDICTED: cake,frost,recipe,bouquet,!
+Barb loved the feel of the waves on her feet, but she hated to walk barefoot. As a compromise, she usually wore a pair of
+   EXPECTED: sandals | PREDICTED: shoes,sandals,socks,panties,jeans
+By the end of the day, the hiker’s feet were extremely cold and wet. It was the last time he would ever buy a cheap pair of
+   EXPECTED: boots | PREDICTED: shoes,sneakers,boots,socks,sandals
+Everyone agreed that the stone-washed kind were out of style. But he continued to wear the same old pair of
+   EXPECTED: jeans | PREDICTED: jeans,trousers,clothes,shoes,pants
+As the afternoon progressed, it became hotter and hotter. Keith finally decided to put on a pair of
+   EXPECTED: shorts | PREDICTED: jeans,socks,shoes,pants,shorts
+Fred went to the pantry and got out the homemade jelly his grandmother had brought. Fifteen minutes later, however, he was still struggling to open the
+   EXPECTED: jar | PREDICTED: jelly,jar,refrigerator,recipe,fridge

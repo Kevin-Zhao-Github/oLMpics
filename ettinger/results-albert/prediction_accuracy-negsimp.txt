@@ -1,0 +1,33 @@
+
+
+***
+MODEL: albert-large-v2
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 0.5 (9/18)
+
+ITEMS PREDICTED CORRECTLY:
+
+A trout is a
+   EXPECTED: fish | PREDICTED: trout,.,;,!,fish
+A salmon is a
+   EXPECTED: fish | PREDICTED: .,!,;,coyote,fish
+An ant is an
+   EXPECTED: insect | PREDICTED: ?,insect,advertisement,animal,.
+A bee is an
+   EXPECTED: insect | PREDICTED: insect,extinct,edible,annual,animal
+A robin is a
+   EXPECTED: bird | PREDICTED: cat,robin,bird,*,rooster
+A sparrow is a
+   EXPECTED: bird | PREDICTED: bird,!',sparrow,.,rooster
+An oak is a
+   EXPECTED: tree | PREDICTED: tree,shrub,fossil,conifer,oak
+A pine is a
+   EXPECTED: tree | PREDICTED: tree,conifer,shrub,pine,fossil
+A pea is a
+   EXPECTED: vegetable | PREDICTED: vegetable,tree,small,shrub,bird

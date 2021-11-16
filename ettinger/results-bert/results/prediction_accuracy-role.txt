@@ -1,0 +1,152 @@
+
+
+***
+MODEL: bert-base-uncased
+***
+
+--
+k = 5
+--
+
+Prediction accuracies:
+EXPECTED WORD in top 5 predictions: 0.2727272727272727 (24/88)
+  for cloze quartile 1: 0.24 (0.166666667 upper, 25 items)
+  for cloze quartile 2: 0.2608695652173913 (0.233333333 upper, 23 items)
+  for cloze quartile 3: 0.21739130434782608 (0.333333333 upper, 23 items)
+  for cloze quartile 4: 0.4117647058823529 (0.766666667 upper, 17 items)
+
+ITEMS PREDICTED CORRECTLY:
+
+the old widower remembered which ghost the villager had 
+   EXPECTED: seen | PREDICTED: mentioned,left,killed,seen,been
+the historian documented which prince the assassin had 
+   EXPECTED: killed | PREDICTED: been,killed,taken,chosen,murdered
+the judo master recognized which assailant the defender had 
+   EXPECTED: defeated,beaten | PREDICTED: killed,been,struck,faced,defeated
+the naturalist observed which deer the predators had 
+   EXPECTED: eaten,killed | PREDICTED: killed,attacked,taken,eaten,shot
+the restaurant owner forgot which customer the waitress had 
+   EXPECTED: served | PREDICTED: served,hired,brought,been,taken
+the nanny knew which housekeeper the billionaire had 
+   EXPECTED: hired | PREDICTED: hired,sent,chosen,used,employed
+Tracy announced which applicant the administrator had 
+   EXPECTED: chosen | PREDICTED: chosen,selected,rejected,sent,approved
+the columnist publicized which celebrity the photographer had 
+   EXPECTED: photographed | PREDICTED: been,chosen,interviewed,photographed,taken
+the royal cook asked which chef the lord had 
+   EXPECTED: requested,chosen,hired | PREDICTED: chosen,brought,served,hired,ordered
+the royal cook asked which lord the chef had 
+   EXPECTED: served | PREDICTED: served,chosen,brought,eaten,cooked
+the costume designer confirmed which barber the actor had 
+   EXPECTED: used | PREDICTED: used,played,taken,chosen,worn
+the investigator discovered which couple the abductor had 
+   EXPECTED: taken | PREDICTED: killed,used,taken,murdered,been
+the undead king recognized which zombie the woman had 
+   EXPECTED: killed | PREDICTED: killed,been,become,attacked,bitten
+the broadcaster explained which contestant the judge had 
+   EXPECTED: chosen,disqualified | PREDICTED: chosen,selected,picked,eliminated,nominated
+the newscaster confirmed which policeman the fugitive had 
+   EXPECTED: shot | PREDICTED: been,killed,attacked,shot,taken
+The ape researcher identified which poacher the chimpanzee had 
+   EXPECTED: attacked | PREDICTED: killed,been,bitten,become,attacked
+The ape researcher identified which chimpanzee the poacher had 
+   EXPECTED: killed | PREDICTED: killed,bitten,eaten,captured,attacked
+the committee member guessed which president the advisors had 
+   EXPECTED: chosen | PREDICTED: chosen,selected,elected,sent,nominated
+the committee member guessed which advisors the president had 
+   EXPECTED: appointed | PREDICTED: appointed,sent,chosen,selected,invited
+the parole officer confirmed which delinquent the psychologist had 
+   EXPECTED: seen | PREDICTED: been,seen,identified,become,killed
+the policeman knew which suspect the detective had 
+   EXPECTED: arrested | PREDICTED: identified,found,arrested,planted,taken
+the art critic identified which model the artist had 
+   EXPECTED: painted | PREDICTED: used,chosen,painted,taken,preferred
+the farmhand recorded which goats the breeder had 
+   EXPECTED: bred | PREDICTED: bred,used,raised,taken,kept
+the four-year-old knew which dragon the hero had 
+   EXPECTED: slain | PREDICTED: killed,been,fought,defeated,slain
+
+
+***
+MODEL: bert-large-uncased
+***
+
+--
+k = 5
+--
+
+Prediction accuracies:
+EXPECTED WORD in top 5 predictions: 0.375 (33/88)
+  for cloze quartile 1: 0.28 (0.166666667 upper, 25 items)
+  for cloze quartile 2: 0.34782608695652173 (0.233333333 upper, 23 items)
+  for cloze quartile 3: 0.391304347826087 (0.333333333 upper, 23 items)
+  for cloze quartile 4: 0.5294117647058824 (0.766666667 upper, 17 items)
+
+ITEMS PREDICTED CORRECTLY:
+
+the old widower remembered which ghost the villager had 
+   EXPECTED: seen | PREDICTED: seen,been,killed,mentioned,made
+the old widower remembered which villager the ghost had 
+   EXPECTED: haunted | PREDICTED: been,visited,killed,haunted,seen
+the firefighter reported which victim the paramedic had 
+   EXPECTED: saved | PREDICTED: saved,rescued,seen,killed,hit
+the historian documented which assassin the prince had 
+   EXPECTED: hired | PREDICTED: killed,sent,hired,chosen,used
+the historian documented which prince the assassin had 
+   EXPECTED: killed | PREDICTED: been,killed,chosen,murdered,targeted
+the naturalist observed which deer the predators had 
+   EXPECTED: eaten,killed | PREDICTED: taken,killed,captured,eaten,targeted
+the restaurant owner forgot which customer the waitress had 
+   EXPECTED: served | PREDICTED: served,been,delivered,mentioned,brought
+the nanny knew which housekeeper the billionaire had 
+   EXPECTED: hired | PREDICTED: hired,chosen,taken,married,employed
+the researcher learned which biologist the whale had 
+   EXPECTED: eaten | PREDICTED: killed,attacked,been,eaten,targeted
+the researcher learned which whale the biologist had 
+   EXPECTED: studied | PREDICTED: found,described,mentioned,spotted,studied
+Tracy announced which applicant the administrator had 
+   EXPECTED: chosen | PREDICTED: chosen,selected,sent,called,picked
+the columnist publicized which celebrity the photographer had 
+   EXPECTED: photographed | PREDICTED: photographed,captured,featured,depicted,shot
+the police officer noted which jeweler the burglar had 
+   EXPECTED: robbed | PREDICTED: robbed,hit,stolen,killed,used
+the royal cook asked which chef the lord had 
+   EXPECTED: requested,chosen,hired | PREDICTED: chosen,sent,brought,selected,picked
+the royal cook asked which lord the chef had 
+   EXPECTED: served | PREDICTED: served,killed,mentioned,chosen,offended
+the wildlife curator mentioned which zookeeper the ape had 
+   EXPECTED: attacked | PREDICTED: killed,attacked,eaten,bitten,murdered
+the aid worker realized which refugees the philanthropist had 
+   EXPECTED: helped | PREDICTED: saved,chosen,helped,sent,rescued
+the camper reported which girl the bear had 
+   EXPECTED: eaten | PREDICTED: attacked,killed,eaten,taken,targeted
+the bird watcher saw which photographer the hawk had 
+   EXPECTED: attacked | PREDICTED: struck,killed,targeted,attacked,taken
+the costume designer confirmed which barber the actor had 
+   EXPECTED: used | PREDICTED: chosen,played,worn,used,taken
+the investigator discovered which couple the abductor had 
+   EXPECTED: taken | PREDICTED: used,chosen,been,taken,occupied
+the jail keeper forgot which guard the prisoner had 
+   EXPECTED: attacked | PREDICTED: killed,taken,called,chosen,attacked
+the undead king recognized which zombie the woman had 
+   EXPECTED: killed | PREDICTED: been,become,killed,chosen,mentioned
+the broadcaster explained which contestant the judge had 
+   EXPECTED: chosen,disqualified | PREDICTED: chosen,selected,eliminated,picked,scored
+the newscaster confirmed which policeman the fugitive had 
+   EXPECTED: shot | PREDICTED: been,killed,shot,hit,escaped
+the opera composer revealed which singer the pirate had 
+   EXPECTED: kidnapped,murdered,killed | PREDICTED: stolen,taken,chosen,killed,kidnapped
+The ape researcher identified which poacher the chimpanzee had 
+   EXPECTED: attacked | PREDICTED: killed,attacked,been,caught,encountered
+The ape researcher identified which chimpanzee the poacher had 
+   EXPECTED: killed | PREDICTED: killed,targeted,taken,captured,stolen
+the committee member guessed which president the advisors had 
+   EXPECTED: chosen | PREDICTED: chosen,selected,picked,elected,recommended
+the committee member guessed which advisors the president had 
+   EXPECTED: appointed | PREDICTED: chosen,sent,appointed,received,trusted
+the policeman knew which suspect the detective had 
+   EXPECTED: arrested | PREDICTED: identified,found,been,arrested,mentioned
+the farmhand recorded which goats the breeder had 
+   EXPECTED: bred | PREDICTED: selected,chosen,received,used,bred
+the four-year-old knew which dragon the hero had 
+   EXPECTED: slain | PREDICTED: killed,fought,defeated,been,slain

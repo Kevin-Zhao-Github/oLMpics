@@ -1,0 +1,14 @@
+
+
+***
+MODEL: t5-small
+***
+
+Sensitivity results:
+
+Good completion more probable than role reversal: 0.45454545454545453 (20/44)
+
+Good completion more probable than role reversal -- difference threshold 0.01: 0.0 (0/44)
+
+AVG PROB DIFF: 4.897795309685452e-06
+AVG CLOZE DIFF: 0.23333333329545453

@@ -1,0 +1,327 @@
+"Checkmate," Rosaline announced with glee. She was getting to be really good at chess/monopoly/football
+TGT probs: [0.0065406314097344875, 4.102651291759685e-05, 0.0002551850047893822]
+PREDICTED: ['this', 'that', 'it', 'chess', 'math']
+[0.9021398425102234, 0.03705989941954613, 0.0243935976177454, 0.0065406314097344875, 0.003983801230788231]
+H
+EXP TOP
+----
+
+
+Justin put a second house on Park Place. He and his sister often spent hours playing monopoly/chess/baseball
+TGT probs: [0.0040454077534377575, 0.01869681477546692, 0.017170043662190437]
+PREDICTED: ['together', 'cards', 'tennis', 'tag', 'pool']
+[0.25510480999946594, 0.13808292150497437, 0.11183586716651917, 0.0692121759057045, 0.048168815672397614]
+H
+----
+
+
+He caught the pass and scored another touchdown. There was nothing he enjoyed more than a good game of football/baseball/monopoly
+TGT probs: [0.8382412791252136, 0.042394787073135376, 0.0002576580154709518]
+PREDICTED: ['football', 'baseball', 'basketball', 'golf', 'ball']
+[0.8382412791252136, 0.042394787073135376, 0.0289347842335701, 0.014466144144535065, 0.010960004292428493]
+H
+EXP TOP
+WC BOOST
+----
+
+
+Rich couldn’t count the number of Yankees games he had seen with his father. They both shared a lifelong interest in baseball/football/chess
+TGT probs: [0.7568793296813965, 0.008087669499218464, 1.1756366802728735e-05]
+PREDICTED: ['baseball', 'sports', 'yankees', 'football', 'them']
+[0.7568793296813965, 0.14265188574790955, 0.04033216834068298, 0.008087669499218464, 0.005484737455844879]
+H
+EXP TOP
+----
+
+
+Getting both himself and his car to work on the neighboring island was time-consuming. Every morning he drove for a few minutes and then boarded the ferry/canoe/plane
+TGT probs: [0.33967357873916626, 0.00016665829753037542, 0.31106501817703247]
+PREDICTED: ['ferry', 'plane', 'boat', 'ship', 'bus']
+[0.33967357873916626, 0.31106501817703247, 0.19855336844921112, 0.040954072028398514, 0.02102537266910076]
+L
+EXP TOP
+----
+
+
+The patient was in critical condition and the ambulance wouldn’t be fast enough. They decided they would have to use the helicopter/plane/ferry
+TGT probs: [0.0904274508357048, 0.0031810447108000517, 0.004668712615966797]
+PREDICTED: ['car', 'helicopter', 'ambulance', 'van', 'elevator']
+[0.09457890689373016, 0.0904274508357048, 0.06545562297105789, 0.061082497239112854, 0.04178578406572342]
+L
+EXP TOP
+----
+
+
+Amy was very anxious about traveling abroad for the first time. She felt surprisingly better, however, when she actually boarded the plane/helicopter/canoe
+TGT probs: [0.8129594922065735, 0.0005566918989643455, 1.5516156963713001e-06]
+PREDICTED: ['plane', 'train', 'flight', 'airplane', 'ship']
+[0.8129594922065735, 0.0626637190580368, 0.04116938263177872, 0.02409893460571766, 0.01972079835832119]
+L
+EXP TOP
+----
+
+
+The day before the wedding, the kitchen was just covered with frosting. Annette’s sister was responsible for making the cake/cookies/toast
+TGT probs: [0.9037469625473022, 0.004206883255392313, 4.812835686607286e-05]
+PREDICTED: ['cake', 'cakes', 'dessert', 'cookies', 'mess']
+[0.9037469625473022, 0.040364425629377365, 0.015866683796048164, 0.004206883255392313, 0.002216184977442026]
+L
+EXP TOP
+----
+
+
+The little girl was happy that Santa Claus left nothing but crumbs on the plate. She decided he must have really enjoyed the cookies/cake/pancakes
+TGT probs: [0.010233170352876186, 0.0495484359562397, 0.0003681307134684175]
+PREDICTED: ['food', 'meal', 'feast', 'cake', 'pie']
+[0.19621172547340393, 0.1870948076248169, 0.08115290850400925, 0.0495484359562397, 0.03339674696326256]
+H
+WC BOOST
+----
+
+
+He wanted to make his wife breakfast, but he burned piece after piece. I couldn’t believe he was ruining even the toast/pancakes/cookies
+TGT probs: [0.001347687211818993, 0.0016107115661725402, 0.0007683282601647079]
+PREDICTED: ['best', 'food', 'eggs', 'worst', 'kitchen']
+[0.6687471270561218, 0.048956241458654404, 0.03381273150444031, 0.015708012506365776, 0.01517139095813036]
+H
+----
+
+
+She keeps twirling it around and around under her collar. Stephanie seems really happy that Dan gave her that necklace/bracelet/mascara
+TGT probs: [0.26850154995918274, 0.05576886236667633, 7.562173777841963e-06]
+PREDICTED: ['necklace', 'ring', 'bracelet', 'collar', 'scarf']
+[0.26850154995918274, 0.10325302183628082, 0.05576886236667633, 0.051899030804634094, 0.04021330550312996]
+L
+EXP TOP
+WC BOOST
+----
+
+
+She wanted to make her eyelashes look really black and thick. So she asked to borrow her older friend’s mascara/lipstick/necklace
+TGT probs: [0.038824938237667084, 0.026900867000222206, 0.012255387380719185]
+PREDICTED: ['glasses', 'makeup', 'mascara', 'lipstick', 'car']
+[0.09338085353374481, 0.0636451467871666, 0.038824938237667084, 0.026900867000222206, 0.022197673097252846]
+H
+EXP TOP
+WC BOOST
+----
+
+
+He complained that after she kissed him, he couldn’t get the red color off his face. He finally just asked her to stop wearing that lipstick/mascara/bracelet
+TGT probs: [0.06527582556009293, 0.0025314781814813614, 0.0003698553773574531]
+PREDICTED: ['thing', 'dress', 'look', 'color', 'face']
+[0.08759237080812454, 0.08759136497974396, 0.07664813101291656, 0.07169830799102783, 0.07136090844869614]
+H
+EXP TOP
+----
+
+
+Eleanor offered to fix her visitor some coffee. Then she realized she didn’t have a clean cup/bowl/spoon
+TGT probs: [0.13967737555503845, 0.00038601996493525803, 0.00649779150262475]
+PREDICTED: ['cup', 'shirt', 'room', 'apron', 'mug']
+[0.13967737555503845, 0.10937973111867905, 0.07565559446811676, 0.051076244562864304, 0.04276926442980766]
+L
+EXP TOP
+----
+
+
+My aunt fixed my brother some cereal using her best china. Of course, the first thing he did was drop the bowl/cup/knife
+TGT probs: [0.002029601950198412, 0.009389417245984077, 0.0014859631191939116]
+PREDICTED: ['phone', 'ball', 'subject', 'spoon', 'box']
+[0.16999825835227966, 0.08616431802511215, 0.07637769728899002, 0.04783821478486061, 0.039293717592954636]
+L
+----
+
+
+At the dinner party, I wondered why my mother wasn’t eating her soup. Then I noticed that she didn’t have a spoon/knife/bowl
+TGT probs: [0.020967813208699226, 0.0551375076174736, 0.018231593072414398]
+PREDICTED: ['knife', 'fork', 'cup', 'salad', 'tray']
+[0.0551375076174736, 0.042779434472322464, 0.03909812495112419, 0.033224452286958694, 0.03276723995804787]
+H
+WC BOOST
+----
+
+
+In the dorms, cutting your steak can be a huge struggle. They always give you such a poor quality knife/spoon/cup
+TGT probs: [0.00092985515948385, 6.257624136196682e-06, 4.324524979892885e-06]
+PREDICTED: ['steak', 'meat', 'meal', 'dish', 'cut']
+[0.6949920058250427, 0.05268518626689911, 0.030346015468239784, 0.017526015639305115, 0.01615690439939499]
+L
+EXP TOP
+----
+
+
+He journeyed to the African plains, hoping to get a photograph of the king of the beasts. Unfortunately, the whole time he was there he never saw a lion/tiger/panda
+TGT probs: [0.3208632469177246, 0.056298136711120605, 0.000351168419001624]
+PREDICTED: ['lion', 'leopard', 'tiger', 'horse', 'man']
+[0.3208632469177246, 0.1066896915435791, 0.056298136711120605, 0.035469900816679, 0.03508562594652176]
+H
+EXP TOP
+WC BOOST
+----
+
+
+George was hiking in India when he saw the orange and black striped animal leap out at him. He sustained serious injuries before he managed to kill the tiger/lion/otter
+TGT probs: [0.02392715960741043, 0.014802982099354267, 4.9356378440279514e-05]
+PREDICTED: ['animal', 'creature', 'beast', 'tiger', 'lion']
+[0.7418193221092224, 0.07462423294782639, 0.06389264762401581, 0.02392715960741043, 0.014802982099354267]
+L
+EXP TOP
+WC BOOST
+----
+
+
+Wendy wondered how they had managed to ship such a large animal all the way from China. She waited in line to see the newly acquired panda/otter/tiger
+TGT probs: [0.003575344569981098, 0.0006229389691725373, 0.0027065197937190533]
+PREDICTED: ['animal', 'animals', 'exhibit', 'dog', 'cat']
+[0.11578583717346191, 0.08519423753023148, 0.03208242356777191, 0.029923193156719208, 0.02049865946173668]
+L
+EXP TOP
+----
+
+
+Barb loved the feel of the waves on her feet, but she hated to walk barefoot. As a compromise, she usually wore a pair of sandals/boots/shorts
+TGT probs: [0.31986933946609497, 0.06349339336156845, 0.15781237185001373]
+PREDICTED: ['sandals', 'shorts', 'jeans', 'flats', 'boots']
+[0.31986933946609497, 0.15781237185001373, 0.09099173545837402, 0.09014037996530533, 0.06349339336156845]
+H
+EXP TOP
+----
+
+
+By the end of the day, the hiker’s feet were extremely cold and wet. It was the last time he would ever buy a cheap pair of boots/sandals/jeans
+TGT probs: [0.21929459273815155, 0.04795234277844429, 0.00016295368550345302]
+PREDICTED: ['shoes', 'boots', 'sandals', 'feet', 'sneakers']
+[0.6193353533744812, 0.21929459273815155, 0.04795234277844429, 0.047950878739356995, 0.02367737889289856]
+L
+EXP TOP
+WC BOOST
+----
+
+
+Everyone agreed that the stone-washed kind were out of style. But he continued to wear the same old pair of jeans/shorts/sandals
+TGT probs: [0.22463582456111908, 0.019784973934292793, 0.014234323054552078]
+PREDICTED: ['jeans', 'shoes', 'boots', 'glasses', 'trousers']
+[0.22463582456111908, 0.15674930810928345, 0.1255105882883072, 0.10313404351472855, 0.09215519577264786]
+H
+EXP TOP
+----
+
+
+As the afternoon progressed, it became hotter and hotter. Keith finally decided to put on a pair of shorts/jeans/boots
+TGT probs: [0.1471913605928421, 0.0936550572514534, 0.031095681712031364]
+PREDICTED: ['gloves', 'shorts', 'jeans', 'socks', 'sunglasses']
+[0.31032299995422363, 0.1471913605928421, 0.0936550572514534, 0.09032205492258072, 0.06582730263471603]
+L
+EXP TOP
+WC BOOST
+----
+
+
+Pablo wanted to cut the lumber he had bought to make some shelves. He asked his neighbor if he could borrow her saw/hammer/rake
+TGT probs: [8.942832209868357e-06, 2.4262562874355353e-05, 4.16740876971744e-05]
+PREDICTED: ['car', 'house', 'room', 'truck', 'apartment']
+[0.4749242663383484, 0.06593704968690872, 0.048423103988170624, 0.041798658668994904, 0.038262125104665756]
+L
+----
+
+
+Tina lined up where she thought the nail should go. When she was satisfied, she asked Bruce to hand her the hammer/saw/shovel
+TGT probs: [0.07716091722249985, 0.0027283995877951384, 0.0013466961681842804]
+PREDICTED: ['nail', 'hammer', 'box', 'pencil', 'nails']
+[0.5645442605018616, 0.07716091722249985, 0.03793521225452423, 0.014859928749501705, 0.014859830029308796]
+H
+EXP TOP
+----
+
+
+The snow had piled up on the drive so high that they couldn’t get the car out. When Albert woke up, his father handed him a shovel/rake/saw
+TGT probs: [0.019896812736988068, 7.815379649400711e-05, 0.0023676385171711445]
+PREDICTED: ['note', 'letter', 'blanket', 'bottle', 'gun']
+[0.11415610462427139, 0.05676978826522827, 0.05385075509548187, 0.03291535750031471, 0.031873948872089386]
+H
+EXP TOP
+----
+
+
+The yard was completely covered with a thick layer of dead leaves. Erica decided it was time to get out the rake/shovel/hammer
+TGT probs: [8.183154704966e-07, 8.073338540270925e-05, 0.00016084640810731798]
+PREDICTED: ['car', 'door', 'house', 'window', 'trash']
+[0.2041337788105011, 0.1075795590877533, 0.09411827474832535, 0.06803884357213974, 0.05953216552734375]
+H
+----
+
+
+Fred went to the pantry and got out the homemade jelly his grandmother had brought. Fifteen minutes later, however, he was still struggling to open the jar/box/zipper
+TGT probs: [0.23166868090629578, 0.06417764723300934, 2.826788113452494e-05]
+PREDICTED: ['jar', 'door', 'lid', 'box', 'refrigerator']
+[0.23166868090629578, 0.18519818782806396, 0.17499013245105743, 0.06417764723300934, 0.032958537340164185]
+L
+EXP TOP
+WC BOOST
+----
+
+
+After they unpacked the new refrigerator, they let Billy have his fun. He played for days afterwards with the big box/jar/button
+TGT probs: [0.0001170919495052658, 4.466539849090623e-06, 5.840268386236858e-06]
+PREDICTED: ['boys', 'band', 'kids', 'guys', 'girls']
+[0.22412371635437012, 0.10479363054037094, 0.08519328385591507, 0.07744703441858292, 0.0234784334897995]
+L
+EXP TOP
+----
+
+
+It seemed to catch every time she opened or closed her backpack. She decided she would have to replace the zipper/button/box
+TGT probs: [0.011164397932589054, 0.0017463547410443425, 0.0029171840287745]
+PREDICTED: ['strap', 'clip', 'belt', 'phone', 'bag']
+[0.02459593303501606, 0.022340605035424232, 0.021732326596975327, 0.019166158512234688, 0.017365437000989914]
+H
+EXP TOP
+----
+
+
+One fell off her blouse and got lost, and she didn’t have any extras. She ended up searching all over town to find a matching button/zipper/jar
+TGT probs: [0.0037421828601509333, 0.00012794243230018765, 4.6040913730394095e-06]
+PREDICTED: ['one', 'shirt', 'pair', 'blouse', 'dress']
+[0.3733636736869812, 0.11783677339553833, 0.08629108965396881, 0.0702560618519783, 0.048092301934957504]
+H
+EXP TOP
+----
+
+
+“I’m an animal like Eeyore!" the child exclaimed. His mother wondered why he was pretending to be a donkey/zebra/greyhound
+TGT probs: [0.0104118837043643, 0.0011990886414423585, 8.28550400910899e-05]
+PREDICTED: ['child', 'boy', 'human', 'man', 'dog']
+[0.16596756875514984, 0.10603735595941544, 0.07417101413011551, 0.0683719739317894, 0.06371340155601501]
+L
+EXP TOP
+----
+
+
+At the zoo, my sister asked if they painted the black and white stripes on the animal. I explained to her that they were natural features of a zebra/donkey/chihuahua
+TGT probs: [0.03370126709342003, 0.000179698079591617, 0.000250506738666445]
+PREDICTED: ['cat', 'person', 'human', 'bird', 'species']
+[0.12070222944021225, 0.0903521478176117, 0.07964679598808289, 0.06629079580307007, 0.05589553341269493]
+H
+EXP TOP
+----
+
+
+('"Checkmate," Rosaline announced with glee. She was getting to be really good at', ['chess'], ['this', 'that', 'it', 'chess', 'math'], 'H')
+('He caught the pass and scored another touchdown. There was nothing he enjoyed more than a good game of', ['football'], ['football', 'baseball', 'basketball', 'golf', 'ball'], 'H')
+('Rich couldn’t count the number of Yankees games he had seen with his father. They both shared a lifelong interest in', ['baseball'], ['baseball', 'sports', 'yankees', 'football', 'them'], 'H')
+('Getting both himself and his car to work on the neighboring island was time-consuming. Every morning he drove for a few minutes and then boarded the', ['ferry'], ['ferry', 'plane', 'boat', 'ship', 'bus'], 'L')
+('The patient was in critical condition and the ambulance wouldn’t be fast enough. They decided they would have to use the', ['helicopter'], ['car', 'helicopter', 'ambulance', 'van', 'elevator'], 'L')
+('Amy was very anxious about traveling abroad for the first time. She felt surprisingly better, however, when she actually boarded the', ['plane'], ['plane', 'train', 'flight', 'airplane', 'ship'], 'L')
+('The day before the wedding, the kitchen was just covered with frosting. Annette’s sister was responsible for making the', ['cake'], ['cake', 'cakes', 'dessert', 'cookies', 'mess'], 'L')
+('She keeps twirling it around and around under her collar. Stephanie seems really happy that Dan gave her that', ['necklace'], ['necklace', 'ring', 'bracelet', 'collar', 'scarf'], 'L')
+('She wanted to make her eyelashes look really black and thick. So she asked to borrow her older friend’s', ['mascara'], ['glasses', 'makeup', 'mascara', 'lipstick', 'car'], 'H')
+('Eleanor offered to fix her visitor some coffee. Then she realized she didn’t have a clean', ['cup'], ['cup', 'shirt', 'room', 'apron', 'mug'], 'L')
+('He journeyed to the African plains, hoping to get a photograph of the king of the beasts. Unfortunately, the whole time he was there he never saw a', ['lion'], ['lion', 'leopard', 'tiger', 'horse', 'man'], 'H')
+('George was hiking in India when he saw the orange and black striped animal leap out at him. He sustained serious injuries before he managed to kill the', ['tiger'], ['animal', 'creature', 'beast', 'tiger', 'lion'], 'L')
+('Barb loved the feel of the waves on her feet, but she hated to walk barefoot. As a compromise, she usually wore a pair of', ['sandals'], ['sandals', 'shorts', 'jeans', 'flats', 'boots'], 'H')
+('By the end of the day, the hiker’s feet were extremely cold and wet. It was the last time he would ever buy a cheap pair of', ['boots'], ['shoes', 'boots', 'sandals', 'feet', 'sneakers'], 'L')
+('Everyone agreed that the stone-washed kind were out of style. But he continued to wear the same old pair of', ['jeans'], ['jeans', 'shoes', 'boots', 'glasses', 'trousers'], 'H')
+('As the afternoon progressed, it became hotter and hotter. Keith finally decided to put on a pair of', ['shorts'], ['gloves', 'shorts', 'jeans', 'socks', 'sunglasses'], 'L')
+('Tina lined up where she thought the nail should go. When she was satisfied, she asked Bruce to hand her the', ['hammer'], ['nail', 'hammer', 'box', 'pencil', 'nails'], 'H')
+('Fred went to the pantry and got out the homemade jelly his grandmother had brought. Fifteen minutes later, however, he was still struggling to open the', ['jar'], ['jar', 'door', 'lid', 'box', 'refrigerator'], 'L')

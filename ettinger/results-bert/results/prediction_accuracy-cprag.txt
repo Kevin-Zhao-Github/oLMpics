@@ -1,0 +1,100 @@
+
+
+***
+MODEL: bert-base-uncased
+***
+
+--
+k = 5
+--
+
+Prediction accuracies:
+EXPECTED TARGET in TOP 5 predictions: 0.5 (17/34)
+
+ITEMS PREDICTED CORRECTLY:
+
+"Checkmate," Rosaline announced with glee. She was getting to be really good at
+   EXPECTED: chess | PREDICTED: that,it,this,chess,math
+He caught the pass and scored another touchdown. There was nothing he enjoyed more than a good game of
+   EXPECTED: football | PREDICTED: football,basketball,baseball,golf,soccer
+Rich couldn’t count the number of Yankees games he had seen with his father. They both shared a lifelong interest in
+   EXPECTED: baseball | PREDICTED: baseball,sports,yankees,football,pitching
+Getting both himself and his car to work on the neighboring island was time-consuming. Every morning he drove for a few minutes and then boarded the
+   EXPECTED: ferry | PREDICTED: ferry,plane,bus,train,boat
+The patient was in critical condition and the ambulance wouldn’t be fast enough. They decided they would have to use the
+   EXPECTED: helicopter | PREDICTED: ambulance,restroom,hospital,bathroom,helicopter
+Amy was very anxious about traveling abroad for the first time. She felt surprisingly better, however, when she actually boarded the
+   EXPECTED: plane | PREDICTED: ship,plane,train,boat,flight
+The day before the wedding, the kitchen was just covered with frosting. Annette’s sister was responsible for making the
+   EXPECTED: cake | PREDICTED: cake,cookies,dishes,cakes,baking
+She keeps twirling it around and around under her collar. Stephanie seems really happy that Dan gave her that
+   EXPECTED: necklace | PREDICTED: necklace,ring,gift,bracelet,one
+Eleanor offered to fix her visitor some coffee. Then she realized she didn’t have a clean
+   EXPECTED: cup | PREDICTED: cup,slate,mug,coffee,one
+My aunt fixed my brother some cereal using her best china. Of course, the first thing he did was drop the
+   EXPECTED: bowl | PREDICTED: spoon,cereal,bowl,fork,cup
+He journeyed to the African plains, hoping to get a photograph of the king of the beasts. Unfortunately, the whole time he was there he never saw a
+   EXPECTED: lion | PREDICTED: lion,man,picture,face,dinosaur
+George was hiking in India when he saw the orange and black striped animal leap out at him. He sustained serious injuries before he managed to kill the
+   EXPECTED: tiger | PREDICTED: animal,beast,creature,tiger,lion
+Barb loved the feel of the waves on her feet, but she hated to walk barefoot. As a compromise, she usually wore a pair of
+   EXPECTED: sandals | PREDICTED: shorts,sandals,heels,jeans,shoes
+By the end of the day, the hiker’s feet were extremely cold and wet. It was the last time he would ever buy a cheap pair of
+   EXPECTED: boots | PREDICTED: shoes,sneakers,boots,sandals,socks
+Everyone agreed that the stone-washed kind were out of style. But he continued to wear the same old pair of
+   EXPECTED: jeans | PREDICTED: jeans,clothes,trousers,pants,boots
+As the afternoon progressed, it became hotter and hotter. Keith finally decided to put on a pair of
+   EXPECTED: shorts | PREDICTED: jeans,shorts,boxers,pants,socks
+Tina lined up where she thought the nail should go. When she was satisfied, she asked Bruce to hand her the
+   EXPECTED: hammer | PREDICTED: nail,nails,gun,box,hammer
+
+
+***
+MODEL: bert-large-uncased
+***
+
+--
+k = 5
+--
+
+Prediction accuracies:
+EXPECTED TARGET in TOP 5 predictions: 0.5294117647058824 (18/34)
+
+ITEMS PREDICTED CORRECTLY:
+
+"Checkmate," Rosaline announced with glee. She was getting to be really good at
+   EXPECTED: chess | PREDICTED: this,that,it,chess,math
+He caught the pass and scored another touchdown. There was nothing he enjoyed more than a good game of
+   EXPECTED: football | PREDICTED: football,baseball,basketball,golf,ball
+Rich couldn’t count the number of Yankees games he had seen with his father. They both shared a lifelong interest in
+   EXPECTED: baseball | PREDICTED: baseball,sports,yankees,football,them
+Getting both himself and his car to work on the neighboring island was time-consuming. Every morning he drove for a few minutes and then boarded the
+   EXPECTED: ferry | PREDICTED: ferry,plane,boat,ship,bus
+The patient was in critical condition and the ambulance wouldn’t be fast enough. They decided they would have to use the
+   EXPECTED: helicopter | PREDICTED: car,helicopter,ambulance,van,elevator
+Amy was very anxious about traveling abroad for the first time. She felt surprisingly better, however, when she actually boarded the
+   EXPECTED: plane | PREDICTED: plane,train,flight,airplane,ship
+The day before the wedding, the kitchen was just covered with frosting. Annette’s sister was responsible for making the
+   EXPECTED: cake | PREDICTED: cake,cakes,dessert,cookies,mess
+She keeps twirling it around and around under her collar. Stephanie seems really happy that Dan gave her that
+   EXPECTED: necklace | PREDICTED: necklace,ring,bracelet,collar,scarf
+She wanted to make her eyelashes look really black and thick. So she asked to borrow her older friend’s
+   EXPECTED: mascara | PREDICTED: glasses,makeup,mascara,lipstick,car
+Eleanor offered to fix her visitor some coffee. Then she realized she didn’t have a clean
+   EXPECTED: cup | PREDICTED: cup,shirt,room,apron,mug
+He journeyed to the African plains, hoping to get a photograph of the king of the beasts. Unfortunately, the whole time he was there he never saw a
+   EXPECTED: lion | PREDICTED: lion,leopard,tiger,horse,man
+George was hiking in India when he saw the orange and black striped animal leap out at him. He sustained serious injuries before he managed to kill the
+   EXPECTED: tiger | PREDICTED: animal,creature,beast,tiger,lion
+Barb loved the feel of the waves on her feet, but she hated to walk barefoot. As a compromise, she usually wore a pair of
+   EXPECTED: sandals | PREDICTED: sandals,shorts,jeans,flats,boots
+By the end of the day, the hiker’s feet were extremely cold and wet. It was the last time he would ever buy a cheap pair of
+   EXPECTED: boots | PREDICTED: shoes,boots,sandals,feet,sneakers
+Everyone agreed that the stone-washed kind were out of style. But he continued to wear the same old pair of
+   EXPECTED: jeans | PREDICTED: jeans,shoes,boots,glasses,trousers
+As the afternoon progressed, it became hotter and hotter. Keith finally decided to put on a pair of
+   EXPECTED: shorts | PREDICTED: gloves,shorts,jeans,socks,sunglasses
+Tina lined up where she thought the nail should go. When she was satisfied, she asked Bruce to hand her the
+   EXPECTED: hammer | PREDICTED: nail,hammer,box,pencil,nails
+Fred went to the pantry and got out the homemade jelly his grandmother had brought. Fifteen minutes later, however, he was still struggling to open the
+   EXPECTED: jar | PREDICTED: jar,door,lid,box,refrigerator

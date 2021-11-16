@@ -1,0 +1,15 @@
+
+
+***
+MODEL: roberta-large
+***
+
+Sensitivity results:
+
+Expected word more probable than two inappropriate targets: 0.29411764705882354 (10/34)
+  for high-constraint items: 0.16666666666666666 (3/18)
+  for low-constraint items: 0.4375 (7/16)
+
+Expected word more probable than two inappropriate targets -- difference threshold 0.01: 0.0 (0/34)
+  for high-constraint items: 0.0 (0/18)
+  for low-constraint items: 0.0 (0/16)

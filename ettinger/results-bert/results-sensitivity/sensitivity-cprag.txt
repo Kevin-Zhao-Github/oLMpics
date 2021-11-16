@@ -1,0 +1,30 @@
+
+
+***
+MODEL: bert-base-uncased
+***
+
+Sensitivity results:
+
+Expected word more probable than two inappropriate targets: 0.7058823529411765 (24/34)
+  for high-constraint items: 0.5555555555555556 (10/18)
+  for low-constraint items: 0.875 (14/16)
+
+Expected word more probable than two inappropriate targets -- difference threshold 0.01: 0.4411764705882353 (15/34)
+  for high-constraint items: 0.3333333333333333 (6/18)
+  for low-constraint items: 0.5625 (9/16)
+
+
+***
+MODEL: bert-large-uncased
+***
+
+Sensitivity results:
+
+Expected word more probable than two inappropriate targets: 0.7941176470588235 (27/34)
+  for high-constraint items: 0.7222222222222222 (13/18)
+  for low-constraint items: 0.875 (14/16)
+
+Expected word more probable than two inappropriate targets -- difference threshold 0.01: 0.5588235294117647 (19/34)
+  for high-constraint items: 0.5555555555555556 (10/18)
+  for low-constraint items: 0.5625 (9/16)

@@ -1,0 +1,49 @@
+
+
+***
+MODEL: distilbert-base-uncased
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 0.9444444444444444 (17/18)
+
+ITEMS PREDICTED CORRECTLY:
+
+A trout is a
+   EXPECTED: fish | PREDICTED: .,;,trout,!,fish
+A salmon is a
+   EXPECTED: fish | PREDICTED: .,;,salmon,fish,!
+An ant is an
+   EXPECTED: insect | PREDICTED: ant,organism,animal,insect,.
+A bee is an
+   EXPECTED: insect | PREDICTED: insect,animal,;,.,organism
+A robin is a
+   EXPECTED: bird | PREDICTED: ;,.,!,robin,bird
+A sparrow is a
+   EXPECTED: bird | PREDICTED: .,sparrow,bird,;,!
+An oak is a
+   EXPECTED: tree | PREDICTED: tree,.,;,shrub,?
+A pine is a
+   EXPECTED: tree | PREDICTED: tree,.,;,shrub,pine
+A rose is a
+   EXPECTED: flower | PREDICTED: .,flower,rose,;,!
+A daisy is a
+   EXPECTED: flower | PREDICTED: .,daisy,;,flower,!
+A carrot is a
+   EXPECTED: vegetable | PREDICTED: carrot,.,;,!,vegetable
+A hammer is a
+   EXPECTED: tool | PREDICTED: hammer,.,tool,;,weapon
+A saw is a
+   EXPECTED: tool | PREDICTED: .,tool,;,weapon,!
+A car is a
+   EXPECTED: vehicle | PREDICTED: .,;,vehicle,car,!
+A truck is a
+   EXPECTED: vehicle | PREDICTED: vehicle,.,;,truck,container
+A hotel is a
+   EXPECTED: building | PREDICTED: hotel,.,;,building,business
+A house is a
+   EXPECTED: building | PREDICTED: .,;,house,dwelling,building

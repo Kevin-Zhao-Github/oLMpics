@@ -1,0 +1,17 @@
+
+
+***
+MODEL: roberta-large
+***
+
+Sensitivity results:
+
+True completion more probable than false: 0.5 (18/36)
+   in affirmative contexts: 0.6666666666666666 (12/18)
+   in negative contexts: 0.3333333333333333 (6/18)
+True completion more probable than false -- difference threshold 0.01: 0.0 (0/36)
+   in affirmative contexts: 0.0 (0/18)
+   in negative contexts: 0.0 (0/18)
+
+
+

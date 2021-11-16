@@ -1,0 +1,54 @@
+
+
+***
+MODEL: bert-base-uncased
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 0.4375 (7/16)
+
+ITEMS PREDICTED CORRECTLY:
+
+With proper equipment, scuba-diving is very
+   EXPECTED: safe | PREDICTED: easy,difficult,safe,common,popular
+Traveling in Baghdad is very
+   EXPECTED: dangerous | PREDICTED: difficult,hard,expensive,easy,dangerous
+Secondhand furniture is very
+   EXPECTED: cheap | PREDICTED: expensive,rare,common,popular,cheap
+Most smokers find that quitting is very
+   EXPECTED: difficult | PREDICTED: difficult,dangerous,hard,easy,safe
+Terrorist bomb attacks are really
+   EXPECTED: dangerous | PREDICTED: dangerous,rare,bad,common,scary
+A baby bunny's fur is very
+   EXPECTED: soft | PREDICTED: soft,short,long,thin,thick
+Businessman Donald Trump is really
+   EXPECTED: rich | PREDICTED: upset,good,impressed,rich,excited
+
+
+***
+MODEL: bert-large-uncased
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 0.3125 (5/16)
+
+ITEMS PREDICTED CORRECTLY:
+
+With proper equipment, scuba-diving is very
+   EXPECTED: safe | PREDICTED: safe,dangerous,easy,possible,difficult
+Traveling in Baghdad is very
+   EXPECTED: dangerous | PREDICTED: difficult,expensive,dangerous,easy,hard
+Most smokers find that quitting is very
+   EXPECTED: difficult | PREDICTED: difficult,easy,effective,dangerous,hard
+Terrorist bomb attacks are really
+   EXPECTED: dangerous | PREDICTED: dangerous,bad,rare,common,scary
+A baby bunny's fur is very
+   EXPECTED: soft | PREDICTED: soft,thick,long,dense,silky

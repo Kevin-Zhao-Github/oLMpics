@@ -1,0 +1,15 @@
+
+
+***
+MODEL: t5-large
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 0.0 (0/18)
+
+ITEMS PREDICTED CORRECTLY:
+

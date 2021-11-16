@@ -1,0 +1,17 @@
+
+
+***
+MODEL: albert-large-v2
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 0.0625 (1/16)
+
+ITEMS PREDICTED CORRECTLY:
+
+Vitamins and proteins are very
+   EXPECTED: good | PREDICTED: .,!,good,;,much

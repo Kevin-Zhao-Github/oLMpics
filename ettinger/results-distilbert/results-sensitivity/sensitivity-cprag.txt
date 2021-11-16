@@ -1,0 +1,15 @@
+
+
+***
+MODEL: distilbert-base-uncased
+***
+
+Sensitivity results:
+
+Expected word more probable than two inappropriate targets: 0.6764705882352942 (23/34)
+  for high-constraint items: 0.6666666666666666 (12/18)
+  for low-constraint items: 0.6875 (11/16)
+
+Expected word more probable than two inappropriate targets -- difference threshold 0.01: 0.38235294117647056 (13/34)
+  for high-constraint items: 0.3888888888888889 (7/18)
+  for low-constraint items: 0.375 (6/16)
