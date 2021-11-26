@@ -1,0 +1,14 @@
+
+
+***
+MODEL: roberta-base
+***
+
+Sensitivity results:
+
+Good completion more probable than role reversal: 0.5909090909090909 (26/44)
+
+Good completion more probable than role reversal -- difference threshold 0.01: 0.0 (0/44)
+
+AVG PROB DIFF: 8.322462840883045e-09
+AVG CLOZE DIFF: 0.23333333329545453

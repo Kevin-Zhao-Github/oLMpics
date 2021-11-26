@@ -1,0 +1,28 @@
+
+
+***
+MODEL: bert-base-uncased
+***
+
+Sensitivity results:
+
+Good completion more probable than role reversal: 0.75 (33/44)
+
+Good completion more probable than role reversal -- difference threshold 0.01: 0.3181818181818182 (14/44)
+
+AVG PROB DIFF: 0.04227161280943454
+AVG CLOZE DIFF: 0.23333333329545453
+
+
+***
+MODEL: bert-large-uncased
+***
+
+Sensitivity results:
+
+Good completion more probable than role reversal: 0.8636363636363636 (38/44)
+
+Good completion more probable than role reversal -- difference threshold 0.01: 0.4318181818181818 (19/44)
+
+AVG PROB DIFF: 0.05579474399002555
+AVG CLOZE DIFF: 0.23333333329545453

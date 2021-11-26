@@ -1,0 +1,49 @@
+
+
+***
+MODEL: roberta-base
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 0.9444444444444444 (17/18)
+
+ITEMS PREDICTED CORRECTLY:
+
+A trout is a
+   EXPECTED: fish | PREDICTED: trout,fish,rainbow,fly,salmon
+A salmon is a
+   EXPECTED: fish | PREDICTED: salmon,fish,trout,whale,rainbow
+An ant is an
+   EXPECTED: insect | PREDICTED: ant,insect,animal,elephant,apple
+A bee is an
+   EXPECTED: insect | PREDICTED: ant,insect,apple,animal,eagle
+A robin is a
+   EXPECTED: bird | PREDICTED: robber,rob,thief,bird,Robin
+A sparrow is a
+   EXPECTED: bird | PREDICTED: bird,hawk,spider,dove,fly
+An oak is a
+   EXPECTED: tree | PREDICTED: tree,pine,forest,oak,nut
+A pine is a
+   EXPECTED: tree | PREDICTED: tree,pine,forest,wood,mushroom
+A rose is a
+   EXPECTED: flower | PREDICTED: rose,thorn,tree,flower,garden
+A daisy is a
+   EXPECTED: flower | PREDICTED: flower,weed,Daisy,butterfly,rose
+A carrot is a
+   EXPECTED: vegetable | PREDICTED: carrot,tree,vegetable,stick,pumpkin
+A hammer is a
+   EXPECTED: tool | PREDICTED: hammer,nail,sword,gun,tool
+A saw is a
+   EXPECTED: tool | PREDICTED: saw,tool,weapon,gun,sight
+A car is a
+   EXPECTED: vehicle | PREDICTED: car,vehicle,house,machine,motorcycle
+A truck is a
+   EXPECTED: vehicle | PREDICTED: truck,car,tank,vehicle,trailer
+A hotel is a
+   EXPECTED: building | PREDICTED: hotel,building,motel,house,city
+A house is a
+   EXPECTED: building | PREDICTED: house,home,building,castle,church

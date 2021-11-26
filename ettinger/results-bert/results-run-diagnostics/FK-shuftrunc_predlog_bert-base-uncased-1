@@ -1,0 +1,300 @@
+glee Rosaline announced with "Checkmate,". good at chess/monopoly/football
+TGT probs: [0.0026259389705955982, 9.09568461793242e-06, 0.00039712878060527146]
+PREDICTED: ['that']
+[0.7486071586608887]
+H
+EXP TOP
+----
+
+
+second Park on put house Place a Justin. hours playing monopoly/chess/baseball
+TGT probs: [9.045560727827251e-05, 0.0007719415589235723, 0.006835880223661661]
+PREDICTED: ['out']
+[0.39275962114334106]
+H
+----
+
+
+the scored caught and another He pass touchdown. game of football/baseball/monopoly
+TGT probs: [0.025505980476737022, 0.001020308816805482, 2.3686443455517292e-05]
+PREDICTED: ['three']
+[0.0506538525223732]
+H
+EXP TOP
+----
+
+
+seen number Rich with of his father games had the couldn’t count he Yankees. interest in baseball/football/chess
+TGT probs: [0.12265931814908981, 0.015298609621822834, 0.0004505615506786853]
+PREDICTED: ['baseball']
+[0.12265931814908981]
+H
+EXP TOP
+WC BOOST
+----
+
+
+himself Getting neighboring on was his time-consuming to work car and the island both. boarded the ferry/canoe/plane
+TGT probs: [0.04385250061750412, 0.0005190962692722678, 0.20211298763751984]
+PREDICTED: ['plane']
+[0.20211298763751984]
+L
+----
+
+
+wouldn’t and condition be fast The patient ambulance critical enough was in the. use the helicopter/plane/ferry
+TGT probs: [0.0050515905022621155, 0.0003771630290430039, 0.0003515093703754246]
+PREDICTED: ['ambulance']
+[0.1206415444612503]
+L
+EXP TOP
+----
+
+
+anxious Amy about was first for very time traveling abroad the. boarded the plane/helicopter/canoe
+TGT probs: [0.05264665186405182, 0.002653379226103425, 0.0008035437203943729]
+PREDICTED: ['ship']
+[0.27357470989227295]
+L
+EXP TOP
+----
+
+
+with day just was the the before frosting kitchen covered wedding, The. making the cake/cookies/toast
+TGT probs: [0.1530415266752243, 0.039553090929985046, 0.02112678997218609]
+PREDICTED: ['cake']
+[0.1530415266752243]
+L
+EXP TOP
+WC BOOST
+----
+
+
+Claus was nothing crumbs girl little the but The on Santa plate happy left that. enjoyed the cookies/cake/pancakes
+TGT probs: [0.002627181587740779, 0.0038031763397157192, 0.0002680337056517601]
+PREDICTED: ['show']
+[0.06240082532167435]
+H
+----
+
+
+He make wife he piece breakfast, to burned piece his but after wanted. even the toast/pancakes/cookies
+TGT probs: [0.0013023816281929612, 0.0011391621083021164, 0.003929992206394672]
+PREDICTED: ['food']
+[0.039904478937387466]
+H
+----
+
+
+around keeps twirling it collar under She her and around. her that necklace/bracelet/mascara
+TGT probs: [0.0007683478179387748, 0.00018937006825581193, 9.985241149479407e-07]
+PREDICTED: ['way']
+[0.32626160979270935]
+L
+EXP TOP
+----
+
+
+look to eyelashes and black make really wanted thick She her. older friend’s mascara/lipstick/necklace
+TGT probs: [3.269632361480035e-05, 3.942367038689554e-05, 0.000149843079270795]
+PREDICTED: ['me']
+[0.05548876151442528]
+H
+----
+
+
+complained He the she face kissed he after color him, red off couldn’t that his get. wearing that lipstick/mascara/bracelet
+TGT probs: [0.0011459075612947345, 5.2791761845583096e-05, 5.3908504924038425e-05]
+PREDICTED: ['face']
+[0.4758734703063965]
+H
+EXP TOP
+----
+
+
+fix her visitor coffee Eleanor some to offered. a clean cup/bowl/spoon
+TGT probs: [0.3831814229488373, 0.002198593458160758, 0.0025577726773917675]
+PREDICTED: ['cup']
+[0.3831814229488373]
+L
+EXP TOP
+----
+
+
+My aunt cereal fixed china her brother using some best my. drop the bowl/cup/knife
+TGT probs: [0.0028718365356326103, 0.017840372398495674, 0.01114563550800085]
+PREDICTED: ['fork']
+[0.0519503690302372]
+L
+----
+
+
+wasn’t the her At why I party, dinner my eating mother soup wondered. have a spoon/knife/bowl
+TGT probs: [0.0004292005905881524, 0.0001173021228169091, 0.0009573116549290717]
+PREDICTED: ['seat']
+[0.7983824014663696]
+H
+----
+
+
+can steak cutting In the a huge be your struggle dorms,. poor quality knife/spoon/cup
+TGT probs: [0.00023469133884645998, 1.1263191481702961e-05, 3.600761556299403e-05]
+PREDICTED: ['food']
+[0.13246020674705505]
+L
+EXP TOP
+----
+
+
+of to of He to the the a African hoping the get beasts plains, journeyed king photograph. saw a lion/tiger/panda
+TGT probs: [0.005379057489335537, 0.0022452969569712877, 1.901766336231958e-05]
+PREDICTED: ['man']
+[0.037867914885282516]
+H
+EXP TOP
+----
+
+
+in leap he was when orange and him George the out animal at India saw striped black hiking. kill the tiger/lion/otter
+TGT probs: [0.1140780970454216, 0.023237787187099457, 0.00011825416004285216]
+PREDICTED: ['tiger']
+[0.1140780970454216]
+L
+EXP TOP
+WC BOOST
+----
+
+
+managed they how had wondered China a large the way Wendy such to from animal ship all. newly acquired panda/otter/tiger
+TGT probs: [1.8286787053511944e-06, 4.501353487285087e-06, 5.302449608279858e-06]
+PREDICTED: ['equipment']
+[0.10051559656858444]
+L
+----
+
+
+her walk on of waves barefoot loved the the to hated but Barb feet, feel she. pair of sandals/boots/shorts
+TGT probs: [0.019395694136619568, 0.11136294901371002, 0.012769791297614574]
+PREDICTED: ['shoes']
+[0.24380455911159515]
+H
+WC BOOST
+----
+
+
+the wet cold By end day, extremely the hiker’s feet the were and of. pair of boots/sandals/jeans
+TGT probs: [0.023792412132024765, 0.0025009631644934416, 0.0008844342082738876]
+PREDICTED: ['them']
+[0.07810637354850769]
+L
+EXP TOP
+----
+
+
+style out that stone-washed kind of were Everyone agreed the. pair of jeans/shorts/sandals
+TGT probs: [0.05853194370865822, 0.004893711302429438, 0.010482481680810452]
+PREDICTED: ['shoes']
+[0.18831345438957214]
+H
+EXP TOP
+----
+
+
+hotter hotter afternoon became progressed, and As the it. pair of shorts/jeans/boots
+TGT probs: [0.0015360104152932763, 0.004476484842598438, 0.02587128058075905]
+PREDICTED: ['eyes']
+[0.18299520015716553]
+L
+----
+
+
+bought to cut had some wanted make he shelves the to Pablo lumber. borrow her saw/hammer/rake
+TGT probs: [6.133839633548632e-05, 0.0001222373393829912, 1.174152839666931e-05]
+PREDICTED: ['car']
+[0.11245433986186981]
+L
+----
+
+
+nail up the should where go she thought Tina lined. her the hammer/saw/shovel
+TGT probs: [0.00014480823301710188, 0.00011163862654939294, 3.441318040131591e-05]
+PREDICTED: ['right']
+[0.009182976558804512]
+H
+EXP TOP
+----
+
+
+couldn’t high on piled had up the get The they snow that out car drive so the. him a shovel/rake/saw
+TGT probs: [0.0006433413946069777, 6.403597944881767e-05, 0.0002949359768535942]
+PREDICTED: ['lot']
+[0.09280763566493988]
+H
+EXP TOP
+----
+
+
+completely The covered dead leaves was a yard thick with of layer. out the rake/shovel/hammer
+TGT probs: [9.478901574766496e-07, 1.7670447050477378e-05, 3.9246824599104e-06]
+PREDICTED: ['window']
+[0.3980882167816162]
+H
+----
+
+
+pantry and jelly to had homemade got went out the his brought Fred the grandmother. open the jar/box/zipper
+TGT probs: [0.0003409694763831794, 0.01756341941654682, 8.631131640868261e-05]
+PREDICTED: ['door']
+[0.7039186358451843]
+L
+WC BOOST
+----
+
+
+his they refrigerator, unpacked they the let new have fun After Billy. the big box/jar/button
+TGT probs: [0.0016246105078607798, 7.896220631664619e-05, 9.181439963867888e-05]
+PREDICTED: ['one']
+[0.08757954835891724]
+L
+EXP TOP
+----
+
+
+catch she backpack to her seemed time or It every opened closed. replace the zipper/button/box
+TGT probs: [0.00048564281314611435, 0.0028681238181889057, 0.010072273202240467]
+PREDICTED: ['lock']
+[0.14073920249938965]
+H
+----
+
+
+fell she her extras and have any blouse got off lost, and One didn’t. a matching button/zipper/jar
+TGT probs: [0.00035760170430876315, 8.993943629320711e-05, 0.0001821480254875496]
+PREDICTED: ['one']
+[0.059258248656988144]
+H
+EXP TOP
+----
+
+
+an exclaimed like animal Eeyore!" child “I’m the. be a donkey/zebra/greyhound
+TGT probs: [0.0003201093932148069, 8.145440006046556e-06, 1.2399967999954242e-05]
+PREDICTED: ['dear']
+[0.09020145982503891]
+L
+EXP TOP
+----
+
+
+At black asked painted stripes they white if my the the on zoo, sister and animal the. of a zebra/donkey/chihuahua
+TGT probs: [0.0011970045743510127, 0.00133093586191535, 3.802830178756267e-05]
+PREDICTED: ['zoo']
+[0.09175171703100204]
+H
+----
+
+
+('seen number Rich with of his father games had the couldn’t count he Yankees. interest in', ['baseball'], ['baseball'], 'H')
+('with day just was the the before frosting kitchen covered wedding, The. making the', ['cake'], ['cake'], 'L')
+('fix her visitor coffee Eleanor some to offered. a clean', ['cup'], ['cup'], 'L')
+('in leap he was when orange and him George the out animal at India saw striped black hiking. kill the', ['tiger'], ['tiger'], 'L')

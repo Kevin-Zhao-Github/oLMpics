@@ -1,0 +1,102 @@
+
+
+***
+MODEL: bert-base-uncased
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 1.0 (18/18)
+
+ITEMS PREDICTED CORRECTLY:
+
+A trout is a
+   EXPECTED: fish | PREDICTED: fish,trout,fishery,stream,species
+A salmon is a
+   EXPECTED: fish | PREDICTED: fish,salmon,trout,fishery,river
+An ant is an
+   EXPECTED: insect | PREDICTED: ant,organism,insect,animal,ants
+A bee is an
+   EXPECTED: insect | PREDICTED: insect,animal,ant,organism,object
+A robin is a
+   EXPECTED: bird | PREDICTED: robin,bird,pigeon,flower,dog
+A sparrow is a
+   EXPECTED: bird | PREDICTED: bird,sparrow,lark,pigeon,fly
+An oak is a
+   EXPECTED: tree | PREDICTED: tree,forest,plant,shrub,species
+A pine is a
+   EXPECTED: tree | PREDICTED: tree,forest,wood,plant,shrub
+A rose is a
+   EXPECTED: flower | PREDICTED: flower,rose,plant,poem,word
+A daisy is a
+   EXPECTED: flower | PREDICTED: daisy,flower,plant,shrub,word
+A carrot is a
+   EXPECTED: vegetable | PREDICTED: carrot,plant,vegetable,weed,fruit
+A pea is a
+   EXPECTED: vegetable | PREDICTED: pea,plant,vegetable,tree,bean
+A hammer is a
+   EXPECTED: tool | PREDICTED: hammer,tool,weapon,device,firearm
+A saw is a
+   EXPECTED: tool | PREDICTED: saw,tool,knife,blade,sword
+A car is a
+   EXPECTED: vehicle | PREDICTED: car,vehicle,driver,concept,person
+A truck is a
+   EXPECTED: vehicle | PREDICTED: truck,vehicle,car,driver,pickup
+A hotel is a
+   EXPECTED: building | PREDICTED: hotel,business,resort,restaurant,building
+A house is a
+   EXPECTED: building | PREDICTED: house,building,property,family,place
+
+
+***
+MODEL: bert-large-uncased
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 1.0 (18/18)
+
+ITEMS PREDICTED CORRECTLY:
+
+A trout is a
+   EXPECTED: fish | PREDICTED: fish,trout,salmon,species,predator
+A salmon is a
+   EXPECTED: fish | PREDICTED: fish,salmon,trout,river,shark
+An ant is an
+   EXPECTED: insect | PREDICTED: ant,insect,animal,organism,entity
+A bee is an
+   EXPECTED: insect | PREDICTED: insect,animal,ant,organism,object
+A robin is a
+   EXPECTED: bird | PREDICTED: bird,robin,person,hunter,pigeon
+A sparrow is a
+   EXPECTED: bird | PREDICTED: bird,sparrow,crow,hawk,parrot
+An oak is a
+   EXPECTED: tree | PREDICTED: tree,pine,forest,log,branch
+A pine is a
+   EXPECTED: tree | PREDICTED: tree,pine,forest,wood,nut
+A rose is a
+   EXPECTED: flower | PREDICTED: rose,flower,daisy,lily,woman
+A daisy is a
+   EXPECTED: flower | PREDICTED: daisy,rose,flower,berry,tree
+A carrot is a
+   EXPECTED: vegetable | PREDICTED: carrot,vegetable,potato,stick,banana
+A pea is a
+   EXPECTED: vegetable | PREDICTED: pea,vegetable,plant,grain,fish
+A hammer is a
+   EXPECTED: tool | PREDICTED: hammer,tool,weapon,nail,device
+A saw is a
+   EXPECTED: tool | PREDICTED: tool,machine,knife,saw,blade
+A car is a
+   EXPECTED: vehicle | PREDICTED: car,vehicle,machine,truck,driver
+A truck is a
+   EXPECTED: vehicle | PREDICTED: truck,car,vehicle,trailer,tractor
+A hotel is a
+   EXPECTED: building | PREDICTED: hotel,resort,building,house,motel
+A house is a
+   EXPECTED: building | PREDICTED: house,building,dwelling,home,structure

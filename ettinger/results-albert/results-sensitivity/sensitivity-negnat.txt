@@ -1,0 +1,23 @@
+
+
+***
+MODEL: albert-large-v2
+***
+
+Sensitivity results:
+
+True completion more probable than false: 0.46875 (15/32)
+   in affirmative contexts: 0.5625 (9/16)
+   in negative contexts: 0.375 (6/16)
+True completion more probable than false -- difference threshold 0.01: 0.0 (0/32)
+   in affirmative contexts: 0.0 (0/16)
+   in negative contexts: 0.0 (0/16)
+
+True completion more probable in NATURAL sentences: 0.4375 (7/16)
+   in affirmative contexts: 0.625 (5/8)
+   in negative contexts: 0.25 (2/8)
+True completion more probable in LESS NATURAL sentences: 0.5 (8/16)
+   in affirmative contexts: 0.5 (4/8)
+   in negative contexts: 0.5 (4/8)
+
+

@@ -1,0 +1,15 @@
+
+
+***
+MODEL: albert-large-v2
+***
+
+Sensitivity results:
+
+Expected word more probable than two inappropriate targets: 0.17647058823529413 (6/34)
+  for high-constraint items: 0.1111111111111111 (2/18)
+  for low-constraint items: 0.25 (4/16)
+
+Expected word more probable than two inappropriate targets -- difference threshold 0.01: 0.0 (0/34)
+  for high-constraint items: 0.0 (0/18)
+  for low-constraint items: 0.0 (0/16)

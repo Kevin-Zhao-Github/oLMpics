@@ -1,0 +1,47 @@
+
+
+***
+MODEL: roberta-large
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 0.8888888888888888 (16/18)
+
+ITEMS PREDICTED CORRECTLY:
+
+A trout is a
+   EXPECTED: fish | PREDICTED: trout,fish,rainbow,predator,catch
+A salmon is a
+   EXPECTED: fish | PREDICTED: salmon,fish,predator,trout,bird
+An ant is an
+   EXPECTED: insect | PREDICTED: ant,insect,animal,egg,elephant
+A bee is an
+   EXPECTED: insect | PREDICTED: insect,egg,ant,angel,animal
+A robin is a
+   EXPECTED: bird | PREDICTED: bird,crow,...,friend,chicken
+A sparrow is a
+   EXPECTED: bird | PREDICTED: bird,hawk,pigeon,chicken,crow
+An oak is a
+   EXPECTED: tree | PREDICTED: tree,rock,maple,wood,forest
+A pine is a
+   EXPECTED: tree | PREDICTED: tree,pine,thorn,plant,forest
+A rose is a
+   EXPECTED: flower | PREDICTED: rose,flower,Rose,bloom,garden
+A daisy is a
+   EXPECTED: flower | PREDICTED: flower,rose,rainbow,weed,warning
+A carrot is a
+   EXPECTED: vegetable | PREDICTED: carrot,vegetable,flower,weed,stick
+A hammer is a
+   EXPECTED: tool | PREDICTED: hammer,tool,weapon,key,nail
+A saw is a
+   EXPECTED: tool | PREDICTED: tool,saw,blade,knife,weapon
+A car is a
+   EXPECTED: vehicle | PREDICTED: car,vehicle,tool,machine,metaphor
+A truck is a
+   EXPECTED: vehicle | PREDICTED: truck,car,vehicle,tractor,machine
+A house is a
+   EXPECTED: building | PREDICTED: house,home,place,building,lot

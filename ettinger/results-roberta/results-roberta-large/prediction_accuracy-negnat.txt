@@ -1,0 +1,31 @@
+
+
+***
+MODEL: roberta-large
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 0.5 (8/16)
+
+ITEMS PREDICTED CORRECTLY:
+
+With proper equipment, scuba-diving is very
+   EXPECTED: safe | PREDICTED: safe,easy,fun,enjoyable,rewarding
+Traveling in Baghdad is very
+   EXPECTED: dangerous | PREDICTED: difficult,expensive,dangerous,complicated,risky
+In moderation, drinking red wine is
+   EXPECTED: good | PREDICTED: fine,safe,healthy,good,okay
+Drinking tap water in developing countries is very
+   EXPECTED: dangerous | PREDICTED: dangerous,expensive,risky,unhealthy,difficult
+Most smokers find that quitting is very
+   EXPECTED: difficult | PREDICTED: difficult,hard,challenging,tough,easy
+Terrorist bomb attacks are really
+   EXPECTED: dangerous | PREDICTED: scary,dangerous,bad,rare,stupid
+A baby bunny's fur is very
+   EXPECTED: soft | PREDICTED: soft,long,fluffy,short,fuzzy
+Businessman Donald Trump is really
+   EXPECTED: rich | PREDICTED: rich,smart,stupid,Â¦,dumb

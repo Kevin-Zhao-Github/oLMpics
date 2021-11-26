@@ -1,0 +1,55 @@
+
+
+***
+MODEL: distilbert-base-uncased
+***
+
+--
+k = 5
+--
+
+Prediction accuracies:
+EXPECTED WORD in top 5 predictions: 0.20454545454545456 (18/88)
+  for cloze quartile 1: 0.16 (0.166666667 upper, 25 items)
+  for cloze quartile 2: 0.13043478260869565 (0.233333333 upper, 23 items)
+  for cloze quartile 3: 0.21739130434782608 (0.333333333 upper, 23 items)
+  for cloze quartile 4: 0.35294117647058826 (0.766666667 upper, 17 items)
+
+ITEMS PREDICTED CORRECTLY:
+
+The librarian documented which celebrities the journalist had 
+   EXPECTED: interviewed | PREDICTED: interviewed,.,written,visited,read
+the historian documented which prince the assassin had 
+   EXPECTED: killed | PREDICTED: .,killed,slain,executed,assassinated
+the judo master recognized which assailant the defender had 
+   EXPECTED: defeated,beaten | PREDICTED: .,killed,committed,:,beaten
+the naturalist observed which deer the predators had 
+   EXPECTED: eaten,killed | PREDICTED: .,eaten,killed,;,:
+the restaurant owner forgot which customer the waitress had 
+   EXPECTED: served | PREDICTED: .,served,hired,?,brought
+the nanny knew which housekeeper the billionaire had 
+   EXPECTED: hired | PREDICTED: .,?,:,;,hired
+the researcher learned which biologist the whale had 
+   EXPECTED: eaten | PREDICTED: .,?,eaten,killed,been
+the columnist publicized which celebrity the photographer had 
+   EXPECTED: photographed | PREDICTED: photographed,.,interviewed,taken,posed
+the police officer noted which jeweler the burglar had 
+   EXPECTED: robbed | PREDICTED: robbed,stolen,.,;,committed
+the royal cook asked which lord the chef had 
+   EXPECTED: served | PREDICTED: ?,.,eaten,:,served
+the camper reported which girl the bear had 
+   EXPECTED: eaten | PREDICTED: eaten,rescued,killed,taken,raped
+the costume designer confirmed which barber the actor had 
+   EXPECTED: used | PREDICTED: worn,played,.,taken,used
+the undead king recognized which zombie the woman had 
+   EXPECTED: killed | PREDICTED: slain,.,killed,become,eaten
+the broadcaster explained which contestant the judge had 
+   EXPECTED: chosen,disqualified | PREDICTED: eliminated,evicted,chosen,.,selected
+the committee member guessed which president the advisors had 
+   EXPECTED: chosen | PREDICTED: .,;,chosen,:,?
+the committee member guessed which advisors the president had 
+   EXPECTED: appointed | PREDICTED: .,:,chosen,appointed,;
+the art critic identified which model the artist had 
+   EXPECTED: painted | PREDICTED: painted,.,executed,:,created
+the four-year-old knew which dragon the hero had 
+   EXPECTED: slain | PREDICTED: .,:,;,?,slain
