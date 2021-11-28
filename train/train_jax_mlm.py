@@ -35,6 +35,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, RandomSampler, SequentialSampler
 
+import jax
+import jax.numpy as jnp
 import transformers
 import wandb
 from tqdm.auto import tqdm, trange
@@ -280,16 +282,14 @@ def evaluate(args, model, tokenizer, eval_dataset, is_train=False):
     assert len(MASK_ID) == 1
     MASK_ID = MASK_ID[0]
     if "t5" in args.model_name_or_path.lower():
-        # LABELS = tokenizer("<extra_id_0>", add_special_tokens=False, return_tensors="pt") # equivalent to "<pad> <extra_id_0>" for decoder_input_ids
-        # LABELS = LABELS.input_ids.to(args.device)
-        decoder_ids = tokenizer("<pad> <extra_id_0>", add_special_tokens=False, return_tensors="pt").input_ids.to(args.device)
+        # decoder_ids = jax.device_put(tokenizer("<pad> <extra_id_0>", add_special_tokens=False, max_length=args.max_seq_length, padding="max_length", truncation=True, return_tensors="np").input_ids)
+        decoder_ids = jax.device_put(tokenizer("<pad> <extra_id_0>", add_special_tokens=False, return_tensors="np").input_ids)
 
     all_answers = []
     all_preds = []
-    eval_loss = 0
 
     for batch in eval_dataloader:
-        model.eval()
+        # model.eval()
 
         curr_answers = []
         # batch["choice_list"] is [num_choices, batch_size]
@@ -301,29 +301,11 @@ def evaluate(args, model, tokenizer, eval_dataset, is_train=False):
         batch_len = len(batch["answer_id"])
         del batch["answer_id"]
         for key in batch:
-            batch[key] = torch.stack(batch[key], dim=-1).to(args.device)
-
-        if "t5" not in args.model_name_or_path.lower():
-            labels = torch.full((batch["input_ids"].size()[:2]), -100, device=args.device)
-            for i, curr_answer in enumerate(curr_answers):
-                MASK_INDEX = batch["input_ids"][i].tolist().index(MASK_ID)
-                assert len(tokenizer.encode(" " + curr_answer, add_special_tokens=False)) == 1
-                labels[i][MASK_INDEX] = tokenizer.encode(" " + curr_answer, add_special_tokens=False)[0]
-        else:
-            # labels = []
-            # for i, curr_answer in enumerate(curr_answers):
-            #     labels += tokenizer.encode(f"<extra_id_0> {curr_answer} <extra_id_1>", return_tensors="pt")
-            # labels = torch.stack(labels, dim=0).to(args.device)
-
-            ins_answers = [f"<extra_id_0> {curr_answer} <extra_id_1>" for curr_answer in curr_answers]
-            labels = tokenizer(ins_answers, padding='longest', return_tensors="pt").input_ids.to(args.device)
+            batch[key] = jax.device_put(torch.stack(batch[key], dim=-1).cpu().numpy())
 
         with torch.no_grad():
-            outputs = model(**batch, labels=labels)
-            eval_loss += outputs.loss
-
             if "t5" in args.model_name_or_path.lower():
-                outputs = model(**batch, decoder_input_ids=decoder_ids.repeat(batch_len, 1))
+                outputs = model(**batch, decoder_input_ids=jnp.repeat(decoder_ids, batch_len, 0))
 
             logits = outputs.logits
             choice_ids = []
@@ -331,20 +313,10 @@ def evaluate(args, model, tokenizer, eval_dataset, is_train=False):
             for i, logit in enumerate(logits):  # Assuming all are single tokens
                 choice_ids = torch.tensor([tokenizer.encode(" " + choice_lists[j][i], add_special_tokens=False)[0] for j in range(len(choice_lists))])
                 if "t5" in args.model_name_or_path.lower():
-                    # probs = logit[0].index_select(0, choice_ids.to(args.device))
-                    probs = logit[1].index_select(0, choice_ids.to(args.device))
-                else:
-                    MASK_INDEX = batch["input_ids"][i].tolist().index(MASK_ID)
-                    probs = logit[MASK_INDEX].index_select(0, choice_ids.to(args.device))
+                    probs = jnp.take(logit[1], choice_ids, 0)
 
-                max_ind = torch.argmax(probs)
+                max_ind = jnp.argmax(probs)
                 all_preds.append(choice_lists[max_ind][i])
-
-    eval_loss /= len(eval_dataset)
-    if is_train:
-        wandb.log({"avg_train_loss": eval_loss})
-    else:
-        wandb.log({"avg_eval_loss": eval_loss})
 
     return (np.array(all_answers) == np.array(all_preds)).mean()
 
@@ -443,16 +415,12 @@ def main():
 
     logger.info("Loading model.")
     if "t5" in args.model_name_or_path.lower():
-        model = transformers.T5ForConditionalGeneration.from_pretrained(args.model_name_or_path).to(args.device)
+        model = transformers.FlaxT5ForConditionalGeneration.from_pretrained(args.model_name_or_path, dtype=jnp.dtype("bfloat16"))  #.to(args.device)
         tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
         tokenizer.mask_token = "<extra_id_0>"
-    elif "gpt" in args.model_name_or_path.lower():
-        raise NotImplementedError
     else:
-        model = transformers.AutoModelForMaskedLM.from_pretrained(args.model_name_or_path).to(args.device)
-        tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
+        raise NotImplementedError
 
-    wandb.watch(model, log_freq=50)
     train_questions, train_choices, train_answer_ids = get_data(args.train_data_path, args.sample_train, args.num_choices)
     eval_questions, eval_choices, eval_answer_ids = get_data(args.eval_data_path, args.sample_eval, args.num_choices)
 

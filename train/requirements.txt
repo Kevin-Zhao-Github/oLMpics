@@ -1,8 +1,12 @@
+flax==0.3.5
+jax==0.2.17
+jaxlib==0.1.65+cuda112
 matplotlib==3.4.1
 numpy==1.20.2
 tokenizers==0.10.2
 torch==1.8.1
 torchvision==0.9.1
 tqdm==4.60.0
-transformers==4.5.1
+transformers==4.12.5
+typing-extensions==3.10.0.2
 wandb==0.12.5
