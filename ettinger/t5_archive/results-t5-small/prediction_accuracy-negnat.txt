@@ -1,0 +1,23 @@
+
+
+***
+MODEL: t5-small
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 0.25 (4/16)
+
+ITEMS PREDICTED CORRECTLY:
+
+In moderation, drinking red wine is
+   EXPECTED: good | PREDICTED: recommended,consumed,good,fine
+Most smokers find that quitting is very
+   EXPECTED: difficult | PREDICTED: difficult,important,dangerous,expensive,easy
+Vitamins and proteins are very
+   EXPECTED: good | PREDICTED: important,good,effective,high,essential
+A baby bunny's fur is very
+   EXPECTED: soft | PREDICTED: cute,fluffy,good,soft

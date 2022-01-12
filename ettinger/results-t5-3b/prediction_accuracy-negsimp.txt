@@ -9,7 +9,39 @@ k = 5
 --
 
 Prediction 'accuracy' (affirmative contexts only):
-TRUE COMPLETION in top 5 predictions: 0.0 (0/18)
+TRUE COMPLETION in top 5 predictions: 0.8888888888888888 (16/18)
 
 ITEMS PREDICTED CORRECTLY:
 
+A trout is a
+   EXPECTED: fish | PREDICTED: fish,small,fresh,large,type
+A salmon is a
+   EXPECTED: fish | PREDICTED: fish,large,small,type,marine
+An ant is an
+   EXPECTED: insect | PREDICTED: animal,insect,example,.,organism
+A bee is an
+   EXPECTED: insect | PREDICTED: insect,animal,important,.,interesting
+A robin is a
+   EXPECTED: bird | PREDICTED: bird,small,song,.,male
+A sparrow is a
+   EXPECTED: bird | PREDICTED: bird,small,song,.,spar
+An oak is a
+   EXPECTED: tree | PREDICTED: tree,strong,good,great,.
+A pine is a
+   EXPECTED: tree | PREDICTED: tree,small,wood,plant,type
+A rose is a
+   EXPECTED: flower | PREDICTED: rose,.,beautiful,flower,gift
+A daisy is a
+   EXPECTED: flower | PREDICTED: flower,small,type,bloom,beautiful
+A carrot is a
+   EXPECTED: vegetable | PREDICTED: vegetable,root,.,sweet,healthy
+A hammer is a
+   EXPECTED: tool | PREDICTED: tool,hand,heavy,small,common
+A saw is a
+   EXPECTED: tool | PREDICTED: tool,machine,hand,power,small
+A car is a
+   EXPECTED: vehicle | PREDICTED: machine,big,great,vehicle,major
+A truck is a
+   EXPECTED: vehicle | PREDICTED: large,vehicle,big,heavy,huge
+A hotel is a
+   EXPECTED: building | PREDICTED: place,building,type,lodging,private

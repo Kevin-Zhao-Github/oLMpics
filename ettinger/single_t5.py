@@ -23,8 +23,3 @@ with torch.no_grad():
     for top_ind in top_inds:
         print(tokenizer.decode([top_ind]))
 
-print("---Generate---")
-with torch.no_grad():
-    outputs = model.generate(input_ids, num_beams=50, num_return_sequences=15, min_length=3, max_length=5)
-    for output in outputs:
-        print(tokenizer.decode(output)) #, skip_special_tokens=True))

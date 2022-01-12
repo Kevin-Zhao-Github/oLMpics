@@ -49,6 +49,9 @@ if __name__ == "__main__":
         top_preds, top_probs, tgt_probs = get_model_responses(inputlist, tgtlist, args.model_name_or_path, model, tokenizer, k=k)
         with open(args.data_dir + '/modelpreds-%s-%s'%(testname, args.model_name_or_path), 'w') as pred_out:
             for i,preds in enumerate(top_preds):
+                # words = preds.split(' ')
+                # words = list(filter(None, words))
+                # pred_out.write(' '.join(words))
                 pred_out.write(' '.join(preds))
                 pred_out.write('\n')
 

@@ -9,7 +9,27 @@ k = 5
 --
 
 Prediction 'accuracy' (affirmative contexts only):
-TRUE COMPLETION in top 5 predictions: 0.0 (0/18)
+TRUE COMPLETION in top 5 predictions: 0.5555555555555556 (10/18)
 
 ITEMS PREDICTED CORRECTLY:
 
+A trout is a
+   EXPECTED: fish | PREDICTED: trou,fish,good,great,source
+A salmon is a
+   EXPECTED: fish | PREDICTED: salmon,fish,great,good,popular
+A bee is an
+   EXPECTED: insect | PREDICTED: animal,insect,ancient,excellent,Indian
+A pine is a
+   EXPECTED: tree | PREDICTED: pine,tree,wood,natural,beautiful
+A rose is a
+   EXPECTED: flower | PREDICTED: rose,flower,Rose,beautiful,gold
+A carrot is a
+   EXPECTED: vegetable | PREDICTED: carrot,good,sweet,bit,vegetable
+A hammer is a
+   EXPECTED: tool | PREDICTED: good,great,simple,tool,Hammer
+A saw is a
+   EXPECTED: tool | PREDICTED: saw,tool,simple,standard,single
+A car is a
+   EXPECTED: vehicle | PREDICTED: car,vehicle,luxury,good,great
+A truck is a
+   EXPECTED: vehicle | PREDICTED: truck,vehicle,good,great,car

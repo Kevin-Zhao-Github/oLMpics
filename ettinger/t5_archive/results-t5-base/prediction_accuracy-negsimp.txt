@@ -1,0 +1,47 @@
+
+
+***
+MODEL: t5-base
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 0.8888888888888888 (16/18)
+
+ITEMS PREDICTED CORRECTLY:
+
+A trout is a
+   EXPECTED: fish | PREDICTED: trou,fish,small,species
+A salmon is a
+   EXPECTED: fish | PREDICTED: salmon,fish,species,type
+An ant is an
+   EXPECTED: insect | PREDICTED: insect,animal,in,insects
+A bee is an
+   EXPECTED: insect | PREDICTED: insect,animal,important,adult
+A robin is a
+   EXPECTED: bird | PREDICTED: small,bird,species,common
+A sparrow is a
+   EXPECTED: bird | PREDICTED: spar,bird,small,common
+An oak is a
+   EXPECTED: tree | PREDICTED: tree,good,wood,beautiful
+A pine is a
+   EXPECTED: tree | PREDICTED: tree,pine,good,very
+A rose is a
+   EXPECTED: flower | PREDICTED: rose,flower,beautiful,symbol
+A daisy is a
+   EXPECTED: flower | PREDICTED: flower,da,beautiful,rose
+A carrot is a
+   EXPECTED: vegetable | PREDICTED: carrot,good,vegetable,sweet
+A pea is a
+   EXPECTED: vegetable | PREDICTED: legume,small,fruit,vegetable
+A hammer is a
+   EXPECTED: tool | PREDICTED: tool,sharp,small,type
+A car is a
+   EXPECTED: vehicle | PREDICTED: car,vehicle,type,motor
+A truck is a
+   EXPECTED: vehicle | PREDICTED: truck,vehicle,type,car
+A house is a
+   EXPECTED: building | PREDICTED: house,home,building,property

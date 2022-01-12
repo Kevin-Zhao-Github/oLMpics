@@ -1,7 +1,9 @@
-MODEL="t5-large"
+MODEL="t5-small"
 
 rm -ri "results-$MODEL"
 mkdir "results-$MODEL"
+
+python get_t5_responses.py output/ $MODEL
 python prediction_accuracy_tests.py \
   --preddir output \
   --resultsdir "results-$MODEL" \

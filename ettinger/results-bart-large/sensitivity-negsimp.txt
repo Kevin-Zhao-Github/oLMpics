@@ -1,0 +1,17 @@
+
+
+***
+MODEL: bart-large
+***
+
+Sensitivity results:
+
+True completion more probable than false: 0.4722222222222222 (17/36)
+   in affirmative contexts: 0.5 (9/18)
+   in negative contexts: 0.4444444444444444 (8/18)
+True completion more probable than false -- difference threshold 0.01: 0.0 (0/36)
+   in affirmative contexts: 0.0 (0/18)
+   in negative contexts: 0.0 (0/18)
+
+
+

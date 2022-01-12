@@ -1,0 +1,25 @@
+
+
+***
+MODEL: t5-base
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 0.3125 (5/16)
+
+ITEMS PREDICTED CORRECTLY:
+
+With proper equipment, scuba-diving is very
+   EXPECTED: safe | PREDICTED: easy,safe,enjoyable,fun,simple
+Secondhand furniture is very
+   EXPECTED: cheap | PREDICTED: popular,rare,affordable,expensive,cheap
+Most smokers find that quitting is very
+   EXPECTED: difficult | PREDICTED: difficult,helpful,easy,beneficial,effective
+Vitamins and proteins are very
+   EXPECTED: good | PREDICTED: important,essential,beneficial,helpful,good
+A baby bunny's fur is very
+   EXPECTED: soft | PREDICTED: soft,delicate,precious,cute,special

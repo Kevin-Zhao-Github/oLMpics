@@ -1,0 +1,45 @@
+
+
+***
+MODEL: t5-3b
+***
+
+--
+k = 5
+--
+
+Prediction 'accuracy' (affirmative contexts only):
+TRUE COMPLETION in top 5 predictions: 0.8333333333333334 (15/18)
+
+ITEMS PREDICTED CORRECTLY:
+
+A trout is a
+   EXPECTED: fish | PREDICTED: fish,small,fresh,large
+A salmon is a
+   EXPECTED: fish | PREDICTED: fish,large,small,type
+An ant is an
+   EXPECTED: insect | PREDICTED: animal,insect,in,example
+A bee is an
+   EXPECTED: insect | PREDICTED: insect,animal,important,in
+A robin is a
+   EXPECTED: bird | PREDICTED: bird,small,song.
+A sparrow is a
+   EXPECTED: bird | PREDICTED: bird,small,song.
+An oak is a
+   EXPECTED: tree | PREDICTED: tree,strong,good,great
+A pine is a
+   EXPECTED: tree | PREDICTED: tree,small,wood,plant
+A rose is a
+   EXPECTED: flower | PREDICTED: rose.,beautiful,flower
+A daisy is a
+   EXPECTED: flower | PREDICTED: flower,small,type,bloom
+A carrot is a
+   EXPECTED: vegetable | PREDICTED: vegetable,root.,sweet
+A hammer is a
+   EXPECTED: tool | PREDICTED: tool,hand,heavy,small
+A saw is a
+   EXPECTED: tool | PREDICTED: tool,machine,hand,power
+A truck is a
+   EXPECTED: vehicle | PREDICTED: large,vehicle,big,heavy
+A hotel is a
+   EXPECTED: building | PREDICTED: place,building,type,lodging

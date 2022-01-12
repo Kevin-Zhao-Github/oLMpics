@@ -1,0 +1,41 @@
+
+
+***
+MODEL: t5-base
+***
+
+--
+k = 5
+--
+
+Prediction accuracies:
+EXPECTED TARGET in TOP 5 predictions: 0.38235294117647056 (13/34)
+
+ITEMS PREDICTED CORRECTLY:
+
+He caught the pass and scored another touchdown. There was nothing he enjoyed more than a good game of
+   EXPECTED: football | PREDICTED: football,golf,rugby,basketball,catch
+Rich couldn’t count the number of Yankees games he had seen with his father. They both shared a lifelong interest in
+   EXPECTED: baseball | PREDICTED: baseball,sports,the,football,Yankee
+Getting both himself and his car to work on the neighboring island was time-consuming. Every morning he drove for a few minutes and then boarded the
+   EXPECTED: ferry | PREDICTED: ferry,bus,plane,train,boat
+Amy was very anxious about traveling abroad for the first time. She felt surprisingly better, however, when she actually boarded the
+   EXPECTED: plane | PREDICTED: plane,airplane,flight,train,bus
+The day before the wedding, the kitchen was just covered with frosting. Annette’s sister was responsible for making the
+   EXPECTED: cake | PREDICTED: cake,frosting,cupcake,cakes,wedding
+She wanted to make her eyelashes look really black and thick. So she asked to borrow her older friend’s
+   EXPECTED: mascara | PREDICTED: eye,mascara,black,hair
+Eleanor offered to fix her visitor some coffee. Then she realized she didn’t have a clean
+   EXPECTED: cup | PREDICTED: coffee,cup,kitchen,room,house
+My aunt fixed my brother some cereal using her best china. Of course, the first thing he did was drop the
+   EXPECTED: bowl | PREDICTED: cereal,bowl,food,rice
+At the dinner party, I wondered why my mother wasn’t eating her soup. Then I noticed that she didn’t have a
+   EXPECTED: spoon | PREDICTED: soup,bowl,spoon,vegetable
+By the end of the day, the hiker’s feet were extremely cold and wet. It was the last time he would ever buy a cheap pair of
+   EXPECTED: boots | PREDICTED: shoes,socks,boots,hiking,sandal
+Everyone agreed that the stone-washed kind were out of style. But he continued to wear the same old pair of
+   EXPECTED: jeans | PREDICTED: shoes,jeans,boots,sandal,pants
+Pablo wanted to cut the lumber he had bought to make some shelves. He asked his neighbor if he could borrow her
+   EXPECTED: saw | PREDICTED: lumber.,wood,saw
+It seemed to catch every time she opened or closed her backpack. She decided she would have to replace the
+   EXPECTED: zipper | PREDICTED: bag,backpack,plastic,zipper

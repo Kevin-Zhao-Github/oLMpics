@@ -1,0 +1,53 @@
+
+
+***
+MODEL: t5-3b
+***
+
+--
+k = 5
+--
+
+Prediction accuracies:
+EXPECTED TARGET in TOP 5 predictions: 0.5588235294117647 (19/34)
+
+ITEMS PREDICTED CORRECTLY:
+
+He caught the pass and scored another touchdown. There was nothing he enjoyed more than a good game of
+   EXPECTED: football | PREDICTED: football,baseball,basketball,soccer,American
+Rich couldn’t count the number of Yankees games he had seen with his father. They both shared a lifelong interest in
+   EXPECTED: baseball | PREDICTED: baseball,the,sports,New,all
+Getting both himself and his car to work on the neighboring island was time-consuming. Every morning he drove for a few minutes and then boarded the
+   EXPECTED: ferry | PREDICTED: ferry,bus,boat,local
+The patient was in critical condition and the ambulance wouldn’t be fast enough. They decided they would have to use the
+   EXPECTED: helicopter | PREDICTED: helicopter,air,fire,Air
+Amy was very anxious about traveling abroad for the first time. She felt surprisingly better, however, when she actually boarded the
+   EXPECTED: plane | PREDICTED: plane,airplane,flight,aircraft
+The day before the wedding, the kitchen was just covered with frosting. Annette’s sister was responsible for making the
+   EXPECTED: cake | PREDICTED: wedding,cake,beautiful,cakes
+The little girl was happy that Santa Claus left nothing but crumbs on the plate. She decided he must have really enjoyed the
+   EXPECTED: cookies | PREDICTED: cookies,cookie,meal,food
+She keeps twirling it around and around under her collar. Stephanie seems really happy that Dan gave her that
+   EXPECTED: necklace | PREDICTED: new,to,little,necklace
+She wanted to make her eyelashes look really black and thick. So she asked to borrow her older friend’s
+   EXPECTED: mascara | PREDICTED: mascara,eye,black,old
+He complained that after she kissed him, he couldn’t get the red color off his face. He finally just asked her to stop wearing that
+   EXPECTED: lipstick | PREDICTED: red,color,lipstick,dress
+Eleanor offered to fix her visitor some coffee. Then she realized she didn’t have a clean
+   EXPECTED: cup | PREDICTED: pot,cup,coffee,kitchen
+My aunt fixed my brother some cereal using her best china. Of course, the first thing he did was drop the
+   EXPECTED: bowl | PREDICTED: bowl,cereal,china,whole
+At the dinner party, I wondered why my mother wasn’t eating her soup. Then I noticed that she didn’t have a
+   EXPECTED: spoon | PREDICTED: spoon,for,soup,bowl
+In the dorms, cutting your steak can be a huge struggle. They always give you such a poor quality
+   EXPECTED: knife | PREDICTED: steak,of,cut,meat,knife
+By the end of the day, the hiker’s feet were extremely cold and wet. It was the last time he would ever buy a cheap pair of
+   EXPECTED: boots | PREDICTED: hiking,shoes,boots,sneakers,walking
+Everyone agreed that the stone-washed kind were out of style. But he continued to wear the same old pair of
+   EXPECTED: jeans | PREDICTED: jeans,stone,shoes,Levi
+Pablo wanted to cut the lumber he had bought to make some shelves. He asked his neighbor if he could borrow her
+   EXPECTED: saw | PREDICTED: saw,circular,table,chain
+It seemed to catch every time she opened or closed her backpack. She decided she would have to replace the
+   EXPECTED: zipper | PREDICTED: zipper,strap,buckle,latch
+One fell off her blouse and got lost, and she didn’t have any extras. She ended up searching all over town to find a matching
+   EXPECTED: button | PREDICTED: one,pair,button,pin

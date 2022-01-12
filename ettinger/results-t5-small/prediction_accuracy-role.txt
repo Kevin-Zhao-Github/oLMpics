@@ -9,11 +9,39 @@ k = 5
 --
 
 Prediction accuracies:
-EXPECTED WORD in top 5 predictions: 0.0 (0/88)
-  for cloze quartile 1: 0.0 (0.166666667 upper, 25 items)
-  for cloze quartile 2: 0.0 (0.233333333 upper, 23 items)
-  for cloze quartile 3: 0.0 (0.333333333 upper, 23 items)
-  for cloze quartile 4: 0.0 (0.766666667 upper, 17 items)
+EXPECTED WORD in top 5 predictions: 0.1590909090909091 (14/88)
+  for cloze quartile 1: 0.12 (0.166666667 upper, 25 items)
+  for cloze quartile 2: 0.13043478260869565 (0.233333333 upper, 23 items)
+  for cloze quartile 3: 0.17391304347826086 (0.333333333 upper, 23 items)
+  for cloze quartile 4: 0.23529411764705882 (0.766666667 upper, 17 items)
 
 ITEMS PREDICTED CORRECTLY:
 
+the old widower remembered which ghost the villager had 
+   EXPECTED: seen | PREDICTED: known,found,seen,chosen,called
+the historian documented which prince the assassin had 
+   EXPECTED: killed | PREDICTED: died,killed,taken,done,served
+the naturalist observed which deer the predators had 
+   EXPECTED: eaten,killed | PREDICTED: seen,eaten,known,found,taken
+the restaurant owner forgot which customer the waitress had 
+   EXPECTED: served | PREDICTED: served,met,asked,chosen,ever
+the nanny knew which housekeeper the billionaire had 
+   EXPECTED: hired | PREDICTED: worked,appointed,hired,left,called
+Tracy announced which applicant the administrator had 
+   EXPECTED: chosen | PREDICTED: chosen,filed,requested,announced,named
+the royal cook asked which chef the lord had 
+   EXPECTED: requested,chosen,hired | PREDICTED: chosen,served,appointed,asked,ever
+the royal cook asked which lord the chef had 
+   EXPECTED: served | PREDICTED: appointed,chosen,served,named,become
+the camper reported which bear the girl had 
+   EXPECTED: seen | PREDICTED: seen,reported,said,died,.
+the bird watcher saw which hawk the photographer had 
+   EXPECTED: photographed | PREDICTED: seen,saw,photographed,found,.
+the costume designer confirmed which barber the actor had 
+   EXPECTED: used | PREDICTED: used,chosen,seen,hired,known
+the broadcaster explained which contestant the judge had 
+   EXPECTED: chosen,disqualified | PREDICTED: chosen,selected,asked,entered,named
+the committee member guessed which president the advisors had 
+   EXPECTED: chosen | PREDICTED: appointed,served,elected,chosen,named
+the committee member guessed which advisors the president had 
+   EXPECTED: appointed | PREDICTED: appointed,given,chosen,served,included
