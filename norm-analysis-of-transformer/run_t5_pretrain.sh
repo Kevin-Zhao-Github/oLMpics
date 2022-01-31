@@ -12,10 +12,10 @@ python t5_pretrain.py \
     --do_eval \
     --per_device_train_batch_size 128 \
     --per_device_eval_batch_size 128 \
-    --learning_rate 1e-4 \
+    --learning_rate 2e-4 \
     --weight_decay 0.0 \
     --adafactor \
-    --num_train_epochs 1 \
+    --num_train_epochs 5 \
     --warmup_steps 20000 \
-    --save_steps 500 \
-    --eval_steps 500
+    --save_steps 500000 \
+    --eval_steps 1000
