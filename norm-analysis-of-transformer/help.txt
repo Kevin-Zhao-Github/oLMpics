@@ -1,0 +1,120 @@
+usage: t5_pretrain.py [-h] [--model_name_or_path MODEL_NAME_OR_PATH]
+                      [--model_type MODEL_TYPE] [--config_name CONFIG_NAME]
+                      [--tokenizer_name TOKENIZER_NAME]
+                      [--cache_dir CACHE_DIR] [--no-use_fast_tokenizer]
+                      [--dtype DTYPE] [--dataset_name DATASET_NAME]
+                      [--dataset_config_name DATASET_CONFIG_NAME]
+                      [--train_file TRAIN_FILE]
+                      [--validation_file VALIDATION_FILE]
+                      [--train_ref_file TRAIN_REF_FILE]
+                      [--validation_ref_file VALIDATION_REF_FILE]
+                      [--overwrite_cache]
+                      [--validation_split_percentage VALIDATION_SPLIT_PERCENTAGE]
+                      [--max_seq_length MAX_SEQ_LENGTH]
+                      [--preprocessing_num_workers PREPROCESSING_NUM_WORKERS]
+                      [--mlm_probability MLM_PROBABILITY]
+                      [--mean_noise_span_length MEAN_NOISE_SPAN_LENGTH]
+                      --output_dir OUTPUT_DIR [--overwrite_output_dir]
+                      [--do_train] [--do_eval]
+                      [--per_device_train_batch_size PER_DEVICE_TRAIN_BATCH_SIZE]
+                      [--per_device_eval_batch_size PER_DEVICE_EVAL_BATCH_SIZE]
+                      [--learning_rate LEARNING_RATE]
+                      [--weight_decay WEIGHT_DECAY] [--adam_beta1 ADAM_BETA1]
+                      [--adam_beta2 ADAM_BETA2] [--adam_epsilon ADAM_EPSILON]
+                      [--adafactor] [--num_train_epochs NUM_TRAIN_EPOCHS]
+                      [--warmup_steps WARMUP_STEPS]
+                      [--logging_steps LOGGING_STEPS]
+                      [--save_steps SAVE_STEPS] [--eval_steps EVAL_STEPS]
+                      [--seed SEED]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --model_name_or_path MODEL_NAME_OR_PATH
+                        The model checkpoint for weights initialization.Don't
+                        set if you want to train a model from scratch.
+  --model_type MODEL_TYPE
+                        Ex: bart
+  --config_name CONFIG_NAME
+                        Pretrained config name or path if not the same as
+                        model_name
+  --tokenizer_name TOKENIZER_NAME
+                        Pretrained tokenizer name or path if not the same as
+                        model_name
+  --cache_dir CACHE_DIR
+                        Where do you want to store the pretrained models
+                        downloaded from s3
+  --no-use_fast_tokenizer
+                        Whether to use one of the fast tokenizer (backed by
+                        the tokenizers library) or not.
+  --dtype DTYPE         Floating-point format in which the model weights
+                        should be initialized and trained. Choose one of
+                        `[float32, float16, bfloat16]`.
+  --dataset_name DATASET_NAME
+                        The name of the dataset to use (via the datasets
+                        library).
+  --dataset_config_name DATASET_CONFIG_NAME
+                        The configuration name of the dataset to use (via the
+                        datasets library).
+  --train_file TRAIN_FILE
+                        The input training data file (a text file).
+  --validation_file VALIDATION_FILE
+                        An optional input evaluation data file to evaluate the
+                        perplexity on (a text file).
+  --train_ref_file TRAIN_REF_FILE
+                        An optional input train ref data file for whole word
+                        masking in Chinese.
+  --validation_ref_file VALIDATION_REF_FILE
+                        An optional input validation ref data file for whole
+                        word masking in Chinese.
+  --overwrite_cache     Overwrite the cached training and evaluation sets
+  --validation_split_percentage VALIDATION_SPLIT_PERCENTAGE
+                        The percentage of the train set used as validation set
+                        in case there's no validation split
+  --max_seq_length MAX_SEQ_LENGTH
+                        The maximum total input sequence length after
+                        tokenization and masking. Sequences longer than this
+                        will be truncated. Default to the max input length of
+                        the model.
+  --preprocessing_num_workers PREPROCESSING_NUM_WORKERS
+                        The number of processes to use for the preprocessing.
+  --mlm_probability MLM_PROBABILITY
+                        Ratio of tokens to mask for span masked language
+                        modeling loss
+  --mean_noise_span_length MEAN_NOISE_SPAN_LENGTH
+                        Mean span length of masked tokens
+  --output_dir OUTPUT_DIR
+                        The output directory where the model predictions and
+                        checkpoints will be written.
+  --overwrite_output_dir
+                        Overwrite the content of the output directory. Use
+                        this to continue training if output_dir points to a
+                        checkpoint directory.
+  --do_train            Whether to run training.
+  --do_eval             Whether to run eval on the dev set.
+  --per_device_train_batch_size PER_DEVICE_TRAIN_BATCH_SIZE
+                        Batch size per GPU/TPU core/CPU for training.
+  --per_device_eval_batch_size PER_DEVICE_EVAL_BATCH_SIZE
+                        Batch size per GPU/TPU core/CPU for evaluation.
+  --learning_rate LEARNING_RATE
+                        The initial learning rate for AdamW.
+  --weight_decay WEIGHT_DECAY
+                        Weight decay for AdamW if we apply some.
+  --adam_beta1 ADAM_BETA1
+                        Beta1 for AdamW optimizer
+  --adam_beta2 ADAM_BETA2
+                        Beta2 for AdamW optimizer
+  --adam_epsilon ADAM_EPSILON
+                        Epsilon for AdamW optimizer.
+  --adafactor           Whether or not to replace AdamW by Adafactor.
+  --num_train_epochs NUM_TRAIN_EPOCHS
+                        Total number of training epochs to perform.
+  --warmup_steps WARMUP_STEPS
+                        Linear warmup over warmup_steps.
+  --logging_steps LOGGING_STEPS
+                        Log every X updates steps.
+  --save_steps SAVE_STEPS
+                        Save checkpoint every X updates steps.
+  --eval_steps EVAL_STEPS
+                        Run an evaluation every X steps.
+  --seed SEED           Random seed that will be set at the beginning of
+                        training.

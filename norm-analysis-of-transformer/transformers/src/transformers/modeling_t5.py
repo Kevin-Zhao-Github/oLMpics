@@ -1157,6 +1157,7 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
         head_mask=None,
         output_attentions=None,
         output_hidden_states=None,
+        output_norms=None,  # Added by Kevin Zhao
         **kwargs
     ):
         r"""
@@ -1227,6 +1228,7 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
                 head_mask=head_mask,
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
+                output_norms=output_norms,  # Added by Kevin Zhao
             )
 
         hidden_states = encoder_outputs[0]
@@ -1256,6 +1258,7 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
             use_cache=use_cache,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
+            output_norms=output_norms,  # Added by Kevin Zhao
         )
 
         # insert decoder past at right place
