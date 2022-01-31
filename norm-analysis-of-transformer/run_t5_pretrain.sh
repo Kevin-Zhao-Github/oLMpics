@@ -6,16 +6,16 @@ python t5_pretrain.py \
     --dataset_name c4 \
     --dataset_config_name realnewslike \
     --max_seq_length 512 \
-    --preprocessing_num_workers 12 \
+    --preprocessing_num_workers 4 \
     --output_dir t5_pretraining_1 \
     --do_train \
     --do_eval \
-    --per_device_train_batch_size 8 \
-    --per_device_eval_batch_size 8 \
-    --learning_rate 5e-5 \
+    --per_device_train_batch_size 128 \
+    --per_device_eval_batch_size 128 \
+    --learning_rate 2e-4 \
     --weight_decay 0.0 \
     --adafactor \
-    --num_train_epochs 1 \
+    --num_train_epochs 5 \
     --warmup_steps 827990 \
-    --save_steps 500 \
+    --save_steps 50000 \
     --eval_steps 500

@@ -623,7 +623,13 @@ def main():
         load_from_cache_file=not data_args.overwrite_cache,
     )
 
+    # wandb.init(project="T5_Pretraining", entity="frostbyte",
+    #            config={**vars(training_args), **vars(model_args), **vars(data_args)})
     wandb.init(project="T5_Pretraining", entity="frostbyte")
+    wandb.config.update(training_args)
+    wandb.config.update(model_args)
+    wandb.config.update(data_args)
+
     accelerator = Accelerator()
 
     # Initialize our training
@@ -723,7 +729,7 @@ def main():
                 eval_specialization_metric = 0
 
                 model.eval()
-                for eval_batch in tqdm(eval_loader, desc="Evaluating"):
+                for eval_batch in tqdm(eval_loader, desc="Evaluating", leave=False):
                     optimizer.zero_grad()
                     loss, decoder_features, decoder_cache, decoder_states, decoder_attns, decoder_self_norms, \
                     decoder_cross_norms, encoder_last_state, encoder_states, encoder_attns, encoder_norms = \
@@ -734,15 +740,15 @@ def main():
                         norms_to_tensor(encoder_norms))
                     eval_specialization_metric += batch_specialization_metric
 
-                    wandb.log({
-                        "eval_loss": eval_loss / len(eval_loader),
-                        "eval_specialization_metric": eval_specialization_metric / len(tokenized_datasets["validation"])
-                    }, step=cur_step)
+                wandb.log({
+                    "eval_loss": eval_loss / len(eval_loader),
+                    "eval_specialization_metric": eval_specialization_metric / len(tokenized_datasets["validation"])
+                }, step=cur_step)
 
             if cur_step % training_args.save_steps == 0 and cur_step > 0:
                 model.save_pretrained(training_args.output_dir)
                 tokenizer.save_pretrained(training_args.output_dir)
-                assert False, "Test"
+
 
 if __name__ == "__main__":
     main()
