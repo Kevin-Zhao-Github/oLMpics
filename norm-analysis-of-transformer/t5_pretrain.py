@@ -308,8 +308,6 @@ class DataCollatorForT5MLM:
             )
 
         # to check that tokens are correctly proprocessed, one can run `self.tokenizer.batch_decode(input_ids)` and `self.tokenizer.batch_decode(labels)` here...
-        print(self.tokenizer.batch_decode(batch["input_ids"]))
-        print(self.tokenizer.batch_decode(batch["labels"]))
         return batch
 
     def create_sentinel_ids(self, mask_indices):
@@ -318,13 +316,16 @@ class DataCollatorForT5MLM:
         The start indices of each mask are replaced by the sentinel ids in increasing
         order. Consecutive mask indices to be deleted are replaced with `-1`.
         """
+        # print("------ in create ----------")
+        # print(mask_indices.shape)
+        # print([np.count_nonzero(mask_index) for mask_index in mask_indices])
         start_indices = mask_indices - np.roll(mask_indices, 1, axis=-1) * mask_indices
         start_indices[:, 0] = mask_indices[:, 0]
 
         sentinel_ids = np.where(start_indices != 0, np.cumsum(start_indices, axis=-1), start_indices)
         sentinel_ids = np.where(sentinel_ids != 0, (len(self.tokenizer) - sentinel_ids), 0)
         sentinel_ids -= mask_indices - start_indices
-
+        # print("------- end create ------")
         return sentinel_ids
 
     def filter_input_ids(self, input_ids, sentinel_ids):
@@ -333,7 +334,6 @@ class DataCollatorForT5MLM:
         This will reduce the sequence length from `expanded_inputs_length` to `input_length`.
         """
         batch_size = input_ids.shape[0]
-
         input_ids_full = np.where(sentinel_ids != 0, sentinel_ids, input_ids)
         input_ids = input_ids_full[input_ids_full > 0].reshape((batch_size, -1))
         input_ids = np.concatenate(
@@ -551,6 +551,11 @@ def main():
         config = transformers.T5Config.from_pretrained(
             model_args.config_name, cache_dir=model_args.cache_dir, vocab_size=len(tokenizer)
         )
+
+        if model_args.model_type != "t5":
+            raise NotImplementedError
+
+        config.decoder_start_token_id = config.pad_token_id
     elif model_args.model_name_or_path:
         config = transformers.T5Config.from_pretrained(model_args.model_name_or_path, cache_dir=model_args.cache_dir)
     else:
@@ -570,8 +575,7 @@ def main():
     # Otherwise, we tokenize every text, then concatenate them together before splitting them in smaller parts.
     # Since we make sure that all sequences are of the same length, no attention_mask is needed.
     def tokenize_function(examples):
-        return tokenizer(examples[text_column_name], return_attention_mask=False,  # return_tensors="pt",
-                         max_length=max_seq_length, truncation=True, padding="max_length")
+        return tokenizer(examples[text_column_name], return_attention_mask=False, truncation=True)
 
     tokenized_datasets = datasets.map(
         tokenize_function,
