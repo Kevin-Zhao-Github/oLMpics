@@ -2,7 +2,7 @@ python t5_pretrain.py \
     --model_type t5 \
     --config_name t5-tiny-6L-4H \
     --tokenizer_name t5-small \
-    --cache_dir ~/.cache/huggingface/ \
+    --cache_dir /mnt/home/kzhao/.cache/huggingface/ \
     --dataset_name c4 \
     --dataset_config_name realnewslike \
     --max_seq_length 512 \
