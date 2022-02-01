@@ -695,41 +695,15 @@ def main():
 
     model, optimizer, train_loader, eval_loader = accelerator.prepare(model, optimizer, train_loader, eval_loader)
 
-    epochs = tqdm(range(num_epochs), desc="Epoch ... ", position=0)
-    for epoch in epochs:
-
+    # epochs = tqdm(range(num_epochs), desc="Epoch ... ", position=0)
+    for epoch in range(num_epochs):
         # only the "total" since the last logging step
         total_train_loss = 0
         total_train_specialization_metric = 0
         total_num_examples = 0
 
-        for step, batch in tqdm(enumerate(train_loader), desc="Training"):
-            model.train()
-            optimizer.zero_grad()
-            loss, decoder_features, decoder_cache, decoder_states, decoder_attns, decoder_self_norms, \
-                decoder_cross_norms, encoder_last_state, encoder_states, encoder_attns, encoder_norms = \
-                model(**batch, output_hidden_states=True, output_attentions=True, output_norms=True)
-
-            accelerator.backward(loss)
-            optimizer.step()
-            scheduler.step()
-
-            total_train_loss += loss.item()
-            batch_specialization_metric, batch_size = compute_specialization_metric(norms_to_tensor(encoder_norms))
-            total_train_specialization_metric += batch_specialization_metric
-            total_num_examples += batch_size
-
+        for step, batch in tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
             cur_step = epoch * len(train_loader) + step
-
-            if cur_step % training_args.logging_steps == 0 and cur_step > 0:
-                wandb.log({
-                    "train_loss": total_train_loss / training_args.logging_steps,
-                    "train_specialization_metric": total_train_specialization_metric / total_num_examples,
-                    "learning_rate": scheduler.get_last_lr()[0]
-                }, step=cur_step)
-                total_train_loss = 0
-                total_train_specialization_metric = 0
-                total_num_examples = 0
 
             if cur_step % training_args.eval_steps == 0:  # and cur_step > 0:
                 eval_loss = 0
@@ -751,6 +725,31 @@ def main():
                     "eval_loss": eval_loss / len(eval_loader),
                     "eval_specialization_metric": eval_specialization_metric / len(tokenized_datasets["validation"])
                 }, step=cur_step)
+
+            model.train()
+            optimizer.zero_grad()
+            loss, decoder_features, decoder_cache, decoder_states, decoder_attns, decoder_self_norms, \
+                decoder_cross_norms, encoder_last_state, encoder_states, encoder_attns, encoder_norms = \
+                model(**batch, output_hidden_states=True, output_attentions=True, output_norms=True)
+
+            accelerator.backward(loss)
+            optimizer.step()
+            scheduler.step()
+
+            total_train_loss += loss.item()
+            batch_specialization_metric, batch_size = compute_specialization_metric(norms_to_tensor(encoder_norms))
+            total_train_specialization_metric += batch_specialization_metric
+            total_num_examples += batch_size
+
+            if cur_step % training_args.logging_steps == 0 and cur_step > 0:
+                wandb.log({
+                    "train_loss": total_train_loss / training_args.logging_steps,
+                    "train_specialization_metric": total_train_specialization_metric / total_num_examples,
+                    "learning_rate": scheduler.get_last_lr()[0]
+                }, step=cur_step)
+                total_train_loss = 0
+                total_train_specialization_metric = 0
+                total_num_examples = 0
 
             if cur_step % training_args.save_steps == 0 and cur_step > 0:
                 model.save_pretrained(training_args.output_dir)
