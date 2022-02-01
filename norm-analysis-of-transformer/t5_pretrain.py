@@ -26,6 +26,7 @@ from dataclasses import asdict, dataclass, field
 # You can also adapt this script on your own masked language modeling task. Pointers for this are left as comments.
 from enum import Enum
 from itertools import chain
+import pickle
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -140,7 +141,9 @@ class DataTrainingArguments:
     """
     Arguments pertaining to what data we are going to input our model for training and eval.
     """
-
+    dataset_pickle_path: Optional[str] = field(
+        default=None, metadata={"help": "Path to pickle file with processed data, using this argument means datasets library is not used."}
+    )
     dataset_name: Optional[str] = field(
         default=None, metadata={"help": "The name of the dataset to use (via the datasets library)."}
     )
@@ -188,8 +191,8 @@ class DataTrainingArguments:
     )
 
     def __post_init__(self):
-        if self.dataset_name is None and self.train_file is None and self.validation_file is None:
-            raise ValueError("Need either a dataset name or a training/validation file.")
+        if self.dataset_pickle_path is None and self.dataset_name is None and self.train_file is None and self.validation_file is None:
+            raise ValueError("Need either a dataset name or a training/validation file or path to processed pickled data.")
         else:
             if self.train_file is not None:
                 extension = self.train_file.split(".")[-1]
@@ -481,57 +484,63 @@ def main():
     # Set seed before initializing model.
     transformers.set_seed(training_args.seed)
 
-    # Get the datasets: you can either provide your own CSV/JSON/TXT training and evaluation files (see below)
-    # or just provide the name of one of the public datasets available on the hub at https://huggingface.co/datasets/
-    # (the dataset will be downloaded automatically from the datasets Hub).
-    #
-    # For CSV/JSON files, this script will use the column called 'text' or the first column if no column called
-    # 'text' is found. You can easily tweak this behavior (see below).
-    if data_args.dataset_name is not None:
-        # Downloading and loading a dataset from the hub.
-        datasets = load_dataset(data_args.dataset_name, data_args.dataset_config_name, cache_dir=model_args.cache_dir)
-
-        if "validation" not in datasets.keys():
-            datasets["validation"] = load_dataset(
-                data_args.dataset_name,
-                data_args.dataset_config_name,
-                split=f"train[:{data_args.validation_split_percentage}%]",
-                cache_dir=model_args.cache_dir,
-            )
-            datasets["train"] = load_dataset(
-                data_args.dataset_name,
-                data_args.dataset_config_name,
-                split=f"train[{data_args.validation_split_percentage}%:]",
-                cache_dir=model_args.cache_dir,
-            )
+    if data_args.dataset_pickle_path is not None:
+        print("Loading processed data from pickle file.")
+        with open(data_args.dataset_pickle_path, "rb") as f:
+            tokenized_datasets = pickle.load(f)
+        print("Done loading pickle data.")
     else:
-        data_files = {}
-        if data_args.train_file is not None:
-            data_files["train"] = data_args.train_file
-        if data_args.validation_file is not None:
-            data_files["validation"] = data_args.validation_file
-        extension = data_args.train_file.split(".")[-1]
-        if extension == "txt":
-            extension = "text"
-        datasets = load_dataset(extension, data_files=data_files, cache_dir=model_args.cache_dir)
+        # Get the datasets: you can either provide your own CSV/JSON/TXT training and evaluation files (see below)
+        # or just provide the name of one of the public datasets available on the hub at https://huggingface.co/datasets/
+        # (the dataset will be downloaded automatically from the datasets Hub).
+        #
+        # For CSV/JSON files, this script will use the column called 'text' or the first column if no column called
+        # 'text' is found. You can easily tweak this behavior (see below).
+        if data_args.dataset_name is not None:
+            # Downloading and loading a dataset from the hub.
+            datasets = load_dataset(data_args.dataset_name, data_args.dataset_config_name, cache_dir=model_args.cache_dir)
 
-        if "validation" not in datasets.keys():
-            datasets["validation"] = load_dataset(
-                extension,
-                data_files=data_files,
-                split=f"train[:{data_args.validation_split_percentage}%]",
-                cache_dir=model_args.cache_dir,
-            )
-            datasets["train"] = load_dataset(
-                extension,
-                data_files=data_files,
-                split=f"train[{data_args.validation_split_percentage}%:]",
-                cache_dir=model_args.cache_dir,
-            )
-    # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
-    # https://huggingface.co/docs/datasets/loading_datasets.html.
+            if "validation" not in datasets.keys():
+                datasets["validation"] = load_dataset(
+                    data_args.dataset_name,
+                    data_args.dataset_config_name,
+                    split=f"train[:{data_args.validation_split_percentage}%]",
+                    cache_dir=model_args.cache_dir,
+                )
+                datasets["train"] = load_dataset(
+                    data_args.dataset_name,
+                    data_args.dataset_config_name,
+                    split=f"train[{data_args.validation_split_percentage}%:]",
+                    cache_dir=model_args.cache_dir,
+                )
+        else:
+            data_files = {}
+            if data_args.train_file is not None:
+                data_files["train"] = data_args.train_file
+            if data_args.validation_file is not None:
+                data_files["validation"] = data_args.validation_file
+            extension = data_args.train_file.split(".")[-1]
+            if extension == "txt":
+                extension = "text"
+            datasets = load_dataset(extension, data_files=data_files, cache_dir=model_args.cache_dir)
 
-    # Load pretrained model and tokenizer
+            if "validation" not in datasets.keys():
+                datasets["validation"] = load_dataset(
+                    extension,
+                    data_files=data_files,
+                    split=f"train[:{data_args.validation_split_percentage}%]",
+                    cache_dir=model_args.cache_dir,
+                )
+                datasets["train"] = load_dataset(
+                    extension,
+                    data_files=data_files,
+                    split=f"train[{data_args.validation_split_percentage}%:]",
+                    cache_dir=model_args.cache_dir,
+                )
+        # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
+        # https://huggingface.co/docs/datasets/loading_datasets.html.
+
+        # Load pretrained model and tokenizer
 
     if model_args.tokenizer_name:
         tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -564,27 +573,7 @@ def main():
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.
-    if training_args.do_train:
-        column_names = datasets["train"].column_names
-    else:
-        column_names = datasets["validation"].column_names
-    text_column_name = "text" if "text" in column_names else column_names[0]
-
     max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
-
-    # Otherwise, we tokenize every text, then concatenate them together before splitting them in smaller parts.
-    # Since we make sure that all sequences are of the same length, no attention_mask is needed.
-    def tokenize_function(examples):
-        return tokenizer(examples[text_column_name], return_attention_mask=False, truncation=True)
-
-    tokenized_datasets = datasets.map(
-        tokenize_function,
-        batched=True,
-        num_proc=data_args.preprocessing_num_workers,
-        remove_columns=column_names,
-        load_from_cache_file=not data_args.overwrite_cache,
-    )
-
     # T5-like span masked language modeling will fuse consecutively masked tokens to a single sentinel token.
     # To ensure that the input length is `max_seq_length`, we need to increase the maximum length
     # according to `mlm_probability` and `mean_noise_span_length`. We can also define the label length accordingly.
@@ -594,37 +583,55 @@ def main():
         mean_noise_span_length=data_args.mean_noise_span_length,
     )
 
-    # Main data processing function that will concatenate all texts from our dataset and generate chunks of expanded_inputs_length.
-    def group_texts(examples):
-        # Concatenate all texts.
-        concatenated_examples = {k: list(chain(*examples[k])) for k in examples.keys()}
-        total_length = len(concatenated_examples[list(examples.keys())[0]])
-        # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
-        # customize this part to your needs.
-        if total_length >= expanded_inputs_length:
-            total_length = (total_length // expanded_inputs_length) * expanded_inputs_length
-        # Split by chunks of max_len.
-        result = {
-            k: [t[i: i + expanded_inputs_length] for i in range(0, total_length, expanded_inputs_length)]
-            for k, t in concatenated_examples.items()
-        }
-        return result
+    if data_args.dataset_pickle_path is None:
+        if training_args.do_train:
+            column_names = datasets["train"].column_names
+        else:
+            column_names = datasets["validation"].column_names
+        text_column_name = "text" if "text" in column_names else column_names[0]
 
-    # Note that with `batched=True`, this map processes 1,000 texts together, so group_texts throws away a
-    # remainder for each of those groups of 1,000 texts. You can adjust that batch_size here but a higher value
-    # might be slower to preprocess.
-    #
-    # To speed up this part, we use multiprocessing. See the documentation of the map method for more information:
-    # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.map
-    tokenized_datasets = tokenized_datasets.map(
-        group_texts,
-        batched=True,
-        num_proc=data_args.preprocessing_num_workers,
-        load_from_cache_file=not data_args.overwrite_cache,
-    )
+        # Otherwise, we tokenize every text, then concatenate them together before splitting them in smaller parts.
+        # Since we make sure that all sequences are of the same length, no attention_mask is needed.
+        def tokenize_function(examples):
+            return tokenizer(examples[text_column_name], return_attention_mask=False, truncation=True)
 
-    # wandb.init(project="T5_Pretraining", entity="frostbyte",
-    #            config={**vars(training_args), **vars(model_args), **vars(data_args)})
+        tokenized_datasets = datasets.map(
+            tokenize_function,
+            batched=True,
+            num_proc=data_args.preprocessing_num_workers,
+            remove_columns=column_names,
+            load_from_cache_file=not data_args.overwrite_cache,
+        )
+
+        # Main data processing function that will concatenate all texts from our dataset and generate chunks of expanded_inputs_length.
+        def group_texts(examples):
+            # Concatenate all texts.
+            concatenated_examples = {k: list(chain(*examples[k])) for k in examples.keys()}
+            total_length = len(concatenated_examples[list(examples.keys())[0]])
+            # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
+            # customize this part to your needs.
+            if total_length >= expanded_inputs_length:
+                total_length = (total_length // expanded_inputs_length) * expanded_inputs_length
+            # Split by chunks of max_len.
+            result = {
+                k: [t[i: i + expanded_inputs_length] for i in range(0, total_length, expanded_inputs_length)]
+                for k, t in concatenated_examples.items()
+            }
+            return result
+
+        # Note that with `batched=True`, this map processes 1,000 texts together, so group_texts throws away a
+        # remainder for each of those groups of 1,000 texts. You can adjust that batch_size here but a higher value
+        # might be slower to preprocess.
+        #
+        # To speed up this part, we use multiprocessing. See the documentation of the map method for more information:
+        # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.map
+        tokenized_datasets = tokenized_datasets.map(
+            group_texts,
+            batched=True,
+            num_proc=data_args.preprocessing_num_workers,
+            load_from_cache_file=not data_args.overwrite_cache,
+        )
+
     wandb.init(project="T5_Pretraining", entity="frostbyte")
     wandb.config.update(training_args)
     wandb.config.update(model_args)
