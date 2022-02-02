@@ -1,4 +1,4 @@
-python t5_pretrain.py \
+accelerate launch t5_pretrain.py \
     --model_type t5 \
     --config_name t5-tiny-6L-4H \
     --tokenizer_name t5-small \
@@ -9,12 +9,12 @@ python t5_pretrain.py \
     --output_dir t5_pretraining_1 \
     --do_train \
     --do_eval \
-    --per_device_train_batch_size 8 \
-    --per_device_eval_batch_size 8 \
-    --learning_rate 5e-5 \
+    --per_device_train_batch_size 16 \
+    --per_device_eval_batch_size 16 \
+    --learning_rate 1e-4 \
     --weight_decay 0.0 \
     --adafactor \
     --num_train_epochs 1 \
-    --warmup_steps 10000 \
-    --save_steps 500000 \
-    --eval_steps 100
+    --warmup_steps 40000 \
+    --save_steps 567000 \
+    --eval_steps 10000
