@@ -719,7 +719,9 @@ def main():
                     decoder_cross_norms, encoder_last_state, encoder_states, encoder_attns, encoder_norms = \
                         model(**eval_batch, output_hidden_states=True, output_attentions=True, output_norms=True)
 
-                    eval_loss += loss.item()
+                    loss = torch.gather(loss)
+                    encoder_norms = torch.gather(encoder_norms)
+                    eval_loss += torch.sum(loss).item()
                     batch_specialization_metric, _ = compute_specialization_metric(
                         norms_to_tensor(encoder_norms))
                     eval_specialization_metric += batch_specialization_metric
@@ -736,11 +738,13 @@ def main():
                 decoder_cross_norms, encoder_last_state, encoder_states, encoder_attns, encoder_norms = \
                 model(**batch, output_hidden_states=True, output_attentions=True, output_norms=True)
 
+            loss = torch.gather(loss)
+            encoder_norms = torch.gather(encoder_norms)
             accelerator.backward(loss)
             optimizer.step()
             scheduler.step()
 
-            total_train_loss += loss.item()
+            total_train_loss += torch.sum(loss).item()
             batch_specialization_metric, batch_size = compute_specialization_metric(norms_to_tensor(encoder_norms))
             total_train_specialization_metric += batch_specialization_metric
             total_num_examples += batch_size
