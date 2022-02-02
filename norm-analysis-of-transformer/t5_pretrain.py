@@ -450,194 +450,196 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
-    parser = transformers.HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
-    if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        # If we pass only one argument to the script and it's the path to a json file,
-        # let's parse it to get our arguments.
-        model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
-    else:
-        model_args, data_args, training_args = parser.parse_args_into_dataclasses()
-
-    if (
-            os.path.exists(training_args.output_dir)
-            and os.listdir(training_args.output_dir)
-            and training_args.do_train
-            and not training_args.overwrite_output_dir
-    ):
-        raise ValueError(
-            f"Output directory ({training_args.output_dir}) already exists and is not empty."
-            "Use --overwrite_output_dir to overcome."
-        )
-
-    # Setup logging
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
-        level=logging.INFO,
-        datefmt="[%X]",
-    )
-
-    logger = logging.getLogger(__name__)
-
-    # Set the verbosity to info of the Transformers logger (on main process only):
-    logger.info(f"Training/evaluation parameters {training_args}")
-
-    # Set seed before initializing model.
-    transformers.set_seed(training_args.seed)
-
-    if data_args.dataset_pickle_path is not None:
-        print("Loading processed data from pickle file.")
-        with open(data_args.dataset_pickle_path, "rb") as f:
-            tokenized_datasets = pickle.load(f)
-        print("Done loading pickle data.")
-    else:
-        # Get the datasets: you can either provide your own CSV/JSON/TXT training and evaluation files (see below)
-        # or just provide the name of one of the public datasets available on the hub at https://huggingface.co/datasets/
-        # (the dataset will be downloaded automatically from the datasets Hub).
-        #
-        # For CSV/JSON files, this script will use the column called 'text' or the first column if no column called
-        # 'text' is found. You can easily tweak this behavior (see below).
-        if data_args.dataset_name is not None:
-            # Downloading and loading a dataset from the hub.
-            datasets = load_dataset(data_args.dataset_name, data_args.dataset_config_name, cache_dir=model_args.cache_dir)
-
-            if "validation" not in datasets.keys():
-                datasets["validation"] = load_dataset(
-                    data_args.dataset_name,
-                    data_args.dataset_config_name,
-                    split=f"train[:{data_args.validation_split_percentage}%]",
-                    cache_dir=model_args.cache_dir,
-                )
-                datasets["train"] = load_dataset(
-                    data_args.dataset_name,
-                    data_args.dataset_config_name,
-                    split=f"train[{data_args.validation_split_percentage}%:]",
-                    cache_dir=model_args.cache_dir,
-                )
-        else:
-            data_files = {}
-            if data_args.train_file is not None:
-                data_files["train"] = data_args.train_file
-            if data_args.validation_file is not None:
-                data_files["validation"] = data_args.validation_file
-            extension = data_args.train_file.split(".")[-1]
-            if extension == "txt":
-                extension = "text"
-            datasets = load_dataset(extension, data_files=data_files, cache_dir=model_args.cache_dir)
-
-            if "validation" not in datasets.keys():
-                datasets["validation"] = load_dataset(
-                    extension,
-                    data_files=data_files,
-                    split=f"train[:{data_args.validation_split_percentage}%]",
-                    cache_dir=model_args.cache_dir,
-                )
-                datasets["train"] = load_dataset(
-                    extension,
-                    data_files=data_files,
-                    split=f"train[{data_args.validation_split_percentage}%:]",
-                    cache_dir=model_args.cache_dir,
-                )
-        # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
-        # https://huggingface.co/docs/datasets/loading_datasets.html.
-
-        # Load pretrained model and tokenizer
-
-    if model_args.tokenizer_name:
-        tokenizer = transformers.AutoTokenizer.from_pretrained(
-            model_args.tokenizer_name, cache_dir=model_args.cache_dir, use_fast=model_args.use_fast_tokenizer
-        )
-    elif model_args.model_name_or_path:
-        tokenizer = transformers.AutoTokenizer.from_pretrained(
-            model_args.model_name_or_path, cache_dir=model_args.cache_dir, use_fast=model_args.use_fast_tokenizer
-        )
-    else:
-        raise ValueError(
-            "You are instantiating a new tokenizer from scratch. This is not supported by this script."
-            "You can do it from another script, save it, and load it from here, using --tokenizer_name."
-        )
-
-    if model_args.config_name:
-        config = transformers.T5Config.from_pretrained(
-            model_args.config_name, cache_dir=model_args.cache_dir, vocab_size=len(tokenizer)
-        )
-
-        if model_args.model_type != "t5":
-            raise NotImplementedError
-
-        config.decoder_start_token_id = config.pad_token_id
-    elif model_args.model_name_or_path:
-        config = transformers.T5Config.from_pretrained(model_args.model_name_or_path, cache_dir=model_args.cache_dir)
-    else:
-        config = transformers.CONFIG_MAPPING[model_args.model_type]()
-        logger.warning("You are instantiating a new config instance from scratch.")
-
-    # Preprocessing the datasets.
-    # First we tokenize all the texts.
-    max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
-    # T5-like span masked language modeling will fuse consecutively masked tokens to a single sentinel token.
-    # To ensure that the input length is `max_seq_length`, we need to increase the maximum length
-    # according to `mlm_probability` and `mean_noise_span_length`. We can also define the label length accordingly.
-    expanded_inputs_length, targets_length = compute_input_and_target_lengths(
-        inputs_length=max_seq_length,
-        noise_density=data_args.mlm_probability,
-        mean_noise_span_length=data_args.mean_noise_span_length,
-    )
-
-    if data_args.dataset_pickle_path is None:
-        if training_args.do_train:
-            column_names = datasets["train"].column_names
-        else:
-            column_names = datasets["validation"].column_names
-        text_column_name = "text" if "text" in column_names else column_names[0]
-
-        # Otherwise, we tokenize every text, then concatenate them together before splitting them in smaller parts.
-        # Since we make sure that all sequences are of the same length, no attention_mask is needed.
-        def tokenize_function(examples):
-            return tokenizer(examples[text_column_name], return_attention_mask=False, truncation=True)
-
-        tokenized_datasets = datasets.map(
-            tokenize_function,
-            batched=True,
-            num_proc=data_args.preprocessing_num_workers,
-            remove_columns=column_names,
-            load_from_cache_file=not data_args.overwrite_cache,
-        )
-
-        # Main data processing function that will concatenate all texts from our dataset and generate chunks of expanded_inputs_length.
-        def group_texts(examples):
-            # Concatenate all texts.
-            concatenated_examples = {k: list(chain(*examples[k])) for k in examples.keys()}
-            total_length = len(concatenated_examples[list(examples.keys())[0]])
-            # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
-            # customize this part to your needs.
-            if total_length >= expanded_inputs_length:
-                total_length = (total_length // expanded_inputs_length) * expanded_inputs_length
-            # Split by chunks of max_len.
-            result = {
-                k: [t[i: i + expanded_inputs_length] for i in range(0, total_length, expanded_inputs_length)]
-                for k, t in concatenated_examples.items()
-            }
-            return result
-
-        # Note that with `batched=True`, this map processes 1,000 texts together, so group_texts throws away a
-        # remainder for each of those groups of 1,000 texts. You can adjust that batch_size here but a higher value
-        # might be slower to preprocess.
-        #
-        # To speed up this part, we use multiprocessing. See the documentation of the map method for more information:
-        # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.map
-        tokenized_datasets = tokenized_datasets.map(
-            group_texts,
-            batched=True,
-            num_proc=data_args.preprocessing_num_workers,
-            load_from_cache_file=not data_args.overwrite_cache,
-        )
-
-    wandb.init(project="T5_Pretraining", entity="frostbyte")
-    wandb.config.update(training_args)
-    wandb.config.update(model_args)
-    wandb.config.update(data_args)
-
     accelerator = Accelerator()
+
+    if accelerator.is_local_main_process:
+        parser = transformers.HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
+        if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
+            # If we pass only one argument to the script and it's the path to a json file,
+            # let's parse it to get our arguments.
+            model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        else:
+            model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
+        if (
+                os.path.exists(training_args.output_dir)
+                and os.listdir(training_args.output_dir)
+                and training_args.do_train
+                and not training_args.overwrite_output_dir
+        ):
+            raise ValueError(
+                f"Output directory ({training_args.output_dir}) already exists and is not empty."
+                "Use --overwrite_output_dir to overcome."
+            )
+
+        # Setup logging
+        logging.basicConfig(
+            format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
+            level=logging.INFO,
+            datefmt="[%X]",
+        )
+
+        logger = logging.getLogger(__name__)
+
+        # Set the verbosity to info of the Transformers logger (on main process only):
+        logger.info(f"Training/evaluation parameters {training_args}")
+
+        # Set seed before initializing model.
+        transformers.set_seed(training_args.seed)
+
+        if data_args.dataset_pickle_path is not None:
+            print("Loading processed data from pickle file.")
+            with open(data_args.dataset_pickle_path, "rb") as f:
+                tokenized_datasets = pickle.load(f)
+            print("Done loading pickle data.")
+        else:
+            # Get the datasets: you can either provide your own CSV/JSON/TXT training and evaluation files (see below)
+            # or just provide the name of one of the public datasets available on the hub at https://huggingface.co/datasets/
+            # (the dataset will be downloaded automatically from the datasets Hub).
+            #
+            # For CSV/JSON files, this script will use the column called 'text' or the first column if no column called
+            # 'text' is found. You can easily tweak this behavior (see below).
+            if data_args.dataset_name is not None:
+                # Downloading and loading a dataset from the hub.
+                datasets = load_dataset(data_args.dataset_name, data_args.dataset_config_name, cache_dir=model_args.cache_dir)
+
+                if "validation" not in datasets.keys():
+                    datasets["validation"] = load_dataset(
+                        data_args.dataset_name,
+                        data_args.dataset_config_name,
+                        split=f"train[:{data_args.validation_split_percentage}%]",
+                        cache_dir=model_args.cache_dir,
+                    )
+                    datasets["train"] = load_dataset(
+                        data_args.dataset_name,
+                        data_args.dataset_config_name,
+                        split=f"train[{data_args.validation_split_percentage}%:]",
+                        cache_dir=model_args.cache_dir,
+                    )
+            else:
+                data_files = {}
+                if data_args.train_file is not None:
+                    data_files["train"] = data_args.train_file
+                if data_args.validation_file is not None:
+                    data_files["validation"] = data_args.validation_file
+                extension = data_args.train_file.split(".")[-1]
+                if extension == "txt":
+                    extension = "text"
+                datasets = load_dataset(extension, data_files=data_files, cache_dir=model_args.cache_dir)
+
+                if "validation" not in datasets.keys():
+                    datasets["validation"] = load_dataset(
+                        extension,
+                        data_files=data_files,
+                        split=f"train[:{data_args.validation_split_percentage}%]",
+                        cache_dir=model_args.cache_dir,
+                    )
+                    datasets["train"] = load_dataset(
+                        extension,
+                        data_files=data_files,
+                        split=f"train[{data_args.validation_split_percentage}%:]",
+                        cache_dir=model_args.cache_dir,
+                    )
+            # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
+            # https://huggingface.co/docs/datasets/loading_datasets.html.
+
+            # Load pretrained model and tokenizer
+
+        if model_args.tokenizer_name:
+            tokenizer = transformers.AutoTokenizer.from_pretrained(
+                model_args.tokenizer_name, cache_dir=model_args.cache_dir, use_fast=model_args.use_fast_tokenizer
+            )
+        elif model_args.model_name_or_path:
+            tokenizer = transformers.AutoTokenizer.from_pretrained(
+                model_args.model_name_or_path, cache_dir=model_args.cache_dir, use_fast=model_args.use_fast_tokenizer
+            )
+        else:
+            raise ValueError(
+                "You are instantiating a new tokenizer from scratch. This is not supported by this script."
+                "You can do it from another script, save it, and load it from here, using --tokenizer_name."
+            )
+
+        if model_args.config_name:
+            config = transformers.T5Config.from_pretrained(
+                model_args.config_name, cache_dir=model_args.cache_dir, vocab_size=len(tokenizer)
+            )
+
+            if model_args.model_type != "t5":
+                raise NotImplementedError
+
+            config.decoder_start_token_id = config.pad_token_id
+        elif model_args.model_name_or_path:
+            config = transformers.T5Config.from_pretrained(model_args.model_name_or_path, cache_dir=model_args.cache_dir)
+        else:
+            config = transformers.CONFIG_MAPPING[model_args.model_type]()
+            logger.warning("You are instantiating a new config instance from scratch.")
+
+        # Preprocessing the datasets.
+        # First we tokenize all the texts.
+        max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
+        # T5-like span masked language modeling will fuse consecutively masked tokens to a single sentinel token.
+        # To ensure that the input length is `max_seq_length`, we need to increase the maximum length
+        # according to `mlm_probability` and `mean_noise_span_length`. We can also define the label length accordingly.
+        expanded_inputs_length, targets_length = compute_input_and_target_lengths(
+            inputs_length=max_seq_length,
+            noise_density=data_args.mlm_probability,
+            mean_noise_span_length=data_args.mean_noise_span_length,
+        )
+
+        if data_args.dataset_pickle_path is None:
+            if training_args.do_train:
+                column_names = datasets["train"].column_names
+            else:
+                column_names = datasets["validation"].column_names
+            text_column_name = "text" if "text" in column_names else column_names[0]
+
+            # Otherwise, we tokenize every text, then concatenate them together before splitting them in smaller parts.
+            # Since we make sure that all sequences are of the same length, no attention_mask is needed.
+            def tokenize_function(examples):
+                return tokenizer(examples[text_column_name], return_attention_mask=False, truncation=True)
+
+            tokenized_datasets = datasets.map(
+                tokenize_function,
+                batched=True,
+                num_proc=data_args.preprocessing_num_workers,
+                remove_columns=column_names,
+                load_from_cache_file=not data_args.overwrite_cache,
+            )
+
+            # Main data processing function that will concatenate all texts from our dataset and generate chunks of expanded_inputs_length.
+            def group_texts(examples):
+                # Concatenate all texts.
+                concatenated_examples = {k: list(chain(*examples[k])) for k in examples.keys()}
+                total_length = len(concatenated_examples[list(examples.keys())[0]])
+                # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
+                # customize this part to your needs.
+                if total_length >= expanded_inputs_length:
+                    total_length = (total_length // expanded_inputs_length) * expanded_inputs_length
+                # Split by chunks of max_len.
+                result = {
+                    k: [t[i: i + expanded_inputs_length] for i in range(0, total_length, expanded_inputs_length)]
+                    for k, t in concatenated_examples.items()
+                }
+                return result
+
+            # Note that with `batched=True`, this map processes 1,000 texts together, so group_texts throws away a
+            # remainder for each of those groups of 1,000 texts. You can adjust that batch_size here but a higher value
+            # might be slower to preprocess.
+            #
+            # To speed up this part, we use multiprocessing. See the documentation of the map method for more information:
+            # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.map
+            tokenized_datasets = tokenized_datasets.map(
+                group_texts,
+                batched=True,
+                num_proc=data_args.preprocessing_num_workers,
+                load_from_cache_file=not data_args.overwrite_cache,
+            )
+
+    if accelerator.is_local_main_process:
+        wandb.init(project="T5_Pretraining", entity="frostbyte")
+        wandb.config.update(training_args)
+        wandb.config.update(model_args)
+        wandb.config.update(data_args)
 
     # Initialize our training
     if model_args.model_name_or_path:
@@ -695,14 +697,14 @@ def main():
 
     model, optimizer, train_loader, eval_loader = accelerator.prepare(model, optimizer, train_loader, eval_loader)
 
-    # epochs = tqdm(range(num_epochs), desc="Epoch ... ", position=0)
     for epoch in range(num_epochs):
         # only the "total" since the last logging step
         total_train_loss = 0
         total_train_specialization_metric = 0
         total_num_examples = 0
 
-        for step, batch in tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
+        for step, batch in tqdm(enumerate(train_loader), desc="Training", total=len(train_loader),
+                                disable=not accelerator.is_local_main_process):
             cur_step = epoch * len(train_loader) + step
 
             if cur_step % training_args.eval_steps == 0:  # and cur_step > 0:
@@ -710,7 +712,8 @@ def main():
                 eval_specialization_metric = 0
 
                 model.eval()
-                for eval_batch in tqdm(eval_loader, desc="Evaluating", leave=False):
+                for eval_batch in tqdm(eval_loader, desc="Evaluating", leave=False,
+                                       disable=not accelerator.is_local_main_process):
                     optimizer.zero_grad()
                     loss, decoder_features, decoder_cache, decoder_states, decoder_attns, decoder_self_norms, \
                     decoder_cross_norms, encoder_last_state, encoder_states, encoder_attns, encoder_norms = \
@@ -721,10 +724,11 @@ def main():
                         norms_to_tensor(encoder_norms))
                     eval_specialization_metric += batch_specialization_metric
 
-                wandb.log({
-                    "eval_loss": eval_loss / len(eval_loader),
-                    "eval_specialization_metric": eval_specialization_metric / len(tokenized_datasets["validation"])
-                }, step=cur_step)
+                if accelerator.is_local_main_process:
+                    wandb.log({
+                        "eval_loss": eval_loss / len(eval_loader),
+                        "eval_specialization_metric": eval_specialization_metric / len(tokenized_datasets["validation"])
+                    }, step=cur_step)
 
             model.train()
             optimizer.zero_grad()
@@ -742,16 +746,18 @@ def main():
             total_num_examples += batch_size
 
             if cur_step % training_args.logging_steps == 0 and cur_step > 0:
-                wandb.log({
-                    "train_loss": total_train_loss / training_args.logging_steps,
-                    "train_specialization_metric": total_train_specialization_metric / total_num_examples,
-                    "learning_rate": scheduler.get_last_lr()[0]
-                }, step=cur_step)
+                if accelerator.is_local_main_process:
+                    wandb.log({
+                        "train_loss": total_train_loss / training_args.logging_steps,
+                        "train_specialization_metric": total_train_specialization_metric / total_num_examples,
+                        "learning_rate": scheduler.get_last_lr()[0]
+                    }, step=cur_step)
+
                 total_train_loss = 0
                 total_train_specialization_metric = 0
                 total_num_examples = 0
 
-            if cur_step % training_args.save_steps == 0 and cur_step > 0:
+            if cur_step % training_args.save_steps == 0 and cur_step > 0 and accelerator.is_local_main_process:
                 model.save_pretrained(training_args.output_dir)
                 tokenizer.save_pretrained(training_args.output_dir)
 
