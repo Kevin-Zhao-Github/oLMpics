@@ -16,5 +16,5 @@ accelerate launch t5_pretrain.py \
     --adafactor \
     --num_train_epochs 1 \
     --warmup_steps 40000 \
-    --save_steps 567000 \
+    --save_steps 50000 \
     --eval_steps 10000

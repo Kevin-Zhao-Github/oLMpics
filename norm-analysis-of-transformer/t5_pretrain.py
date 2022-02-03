@@ -468,7 +468,7 @@ def main():
         )
 
     if accelerator.is_local_main_process:
-        # Setup logging
+       # Setup logging
         logging.basicConfig(
             format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
             level=logging.INFO,
@@ -479,6 +479,10 @@ def main():
 
         # Set the verbosity to info of the Transformers logger (on main process only):
         logger.info(f"Training/evaluation parameters {training_args}")
+
+        if not os.path.exists(training_args.output_dir):
+            os.makedirs(training_args.output_dir)
+            logger.info(f"Created output_dir at {training_args.output_dir}")
 
     # Set seed before initializing model.
     transformers.set_seed(training_args.seed)
@@ -719,9 +723,9 @@ def main():
                     decoder_cross_norms, encoder_last_state, encoder_states, encoder_attns, encoder_norms = \
                         model(**eval_batch, output_hidden_states=True, output_attentions=True, output_norms=True)
 
-                    loss = torch.gather(loss)
-                    encoder_norms = torch.gather(encoder_norms)
-                    eval_loss += torch.sum(loss).item()
+                    loss = torch.sum(accelerator.gather(loss))
+                    encoder_norms = accelerator.gather(encoder_norms)
+                    eval_loss += loss.item()
                     batch_specialization_metric, _ = compute_specialization_metric(
                         norms_to_tensor(encoder_norms))
                     eval_specialization_metric += batch_specialization_metric
@@ -738,13 +742,13 @@ def main():
                 decoder_cross_norms, encoder_last_state, encoder_states, encoder_attns, encoder_norms = \
                 model(**batch, output_hidden_states=True, output_attentions=True, output_norms=True)
 
-            loss = torch.gather(loss)
-            encoder_norms = torch.gather(encoder_norms)
+            loss = torch.sum(accelerator.gather(loss))
+            encoder_norms = accelerator.gather(encoder_norms)
             accelerator.backward(loss)
             optimizer.step()
             scheduler.step()
 
-            total_train_loss += torch.sum(loss).item()
+            total_train_loss += loss.item()
             batch_specialization_metric, batch_size = compute_specialization_metric(norms_to_tensor(encoder_norms))
             total_train_specialization_metric += batch_specialization_metric
             total_num_examples += batch_size
@@ -762,8 +766,13 @@ def main():
                 total_num_examples = 0
 
             if cur_step % training_args.save_steps == 0 and cur_step > 0 and accelerator.is_local_main_process:
-                model.save_pretrained(training_args.output_dir)
-                tokenizer.save_pretrained(training_args.output_dir)
+                checkpoint = {
+                    "step": cur_step,
+                    "model": model.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                    "scheduler": scheduler
+                }
+                accelerator.save(checkpoint, f"{training_args.output_dir}/checkpoint_{cur_step // training_args.save_steps}.pt")
 
 
 if __name__ == "__main__":
