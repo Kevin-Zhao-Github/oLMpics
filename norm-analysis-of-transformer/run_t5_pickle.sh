@@ -4,17 +4,18 @@ accelerate launch t5_pretrain.py \
     --tokenizer_name t5-small \
     --cache_dir /home/kzhao/.cache/huggingface/ \
     --dataset_pickle_path processed_realnewslike.pkl \
-    --max_seq_length 512 \
+    --max_seq_length 128 \
     --preprocessing_num_workers 4 \
     --output_dir t5_pretraining_1 \
     --do_train \
     --do_eval \
-    --per_device_train_batch_size 16 \
-    --per_device_eval_batch_size 16 \
-    --learning_rate 1e-4 \
-    --weight_decay 0.0 \
+    --per_device_train_batch_size 256 \
+    --per_device_eval_batch_size 256 \
+    --learning_rate 0.005 \
+    --weight_decay 0.001 \
     --adafactor \
     --num_train_epochs 1 \
-    --warmup_steps 40000 \
-    --save_steps 50000 \
-    --eval_steps 10000
+    --warmup_steps 2000 \
+    --save_steps 1000 \
+    --eval_steps 10 \
+    --logging_steps 10

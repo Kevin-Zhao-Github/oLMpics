@@ -17,7 +17,7 @@ tokenized_datasets = datasets.map(
     remove_columns=['text', 'timestamp', 'url'],
 )
 
-expanded_inputs_length, targets_length = 568, 114
+expanded_inputs_length, targets_length = 141, 29  # TODO: don't hardcode
 
 def group_texts(examples):
     # Concatenate all texts.
