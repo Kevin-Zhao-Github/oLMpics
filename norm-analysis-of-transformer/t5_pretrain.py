@@ -115,6 +115,10 @@ class ModelArguments:
         default=None,
         metadata={"help": "Ex: bart"},
     )
+    model_resume_checkpoint: Optional[str] = field(
+        default=None,
+        metadata={"help": "Path of model checkpoint, if resuming training"},
+    )
     config_name: Optional[str] = field(
         default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
     )
@@ -405,8 +409,9 @@ class DataCollatorForT5MLM:
 def norms_to_tensor(encoder_norms):
     norm_list = []
     for el in encoder_norms:
-        norm_list.append(el[1].detach())
+        norm_list.append(el[1].detach().cpu())
 
+    del encoder_norms
     return torch.stack(norm_list, dim=1)
 
 
@@ -700,84 +705,99 @@ def main():
     # scheduler = transformers.get_linear_schedule_with_warmup(optimizer, training_args.warmup_steps, num_train_steps)
     scheduler = NoamLR(optimizer, warmup_steps=training_args.warmup_steps)
 
+    if model_args.model_resume_checkpoint is not None:
+        logger.info("Resuming from checkpoint")
+        checkpoint = torch.load(model_args.model_resume_checkpoint)
+        model.load_state_dict(checkpoint["model"])
+        optimizer.load_state_dict(checkpoint["optimizer"])
+        scheduler = checkpoint["scheduler"]
+        resume_step = checkpoint["step"]
+    else:
+        resume_step = -1
+
     model, optimizer, train_loader, eval_loader = accelerator.prepare(model, optimizer, train_loader, eval_loader)
 
-    for epoch in range(num_epochs):
-        # only the "total" since the last logging step
-        total_train_loss = 0
-        total_train_specialization_metric = 0
-        total_num_examples = 0
+    # for epoch in range(num_epochs):
+    assert num_epochs == 1
+    epoch = 0
+    # only the "total" since the last logging step
+    total_train_loss = 0
+    total_train_specialization_metric = 0
+    total_num_examples = 0
 
-        for step, batch in tqdm(enumerate(train_loader), desc="Training", total=len(train_loader),
-                                disable=not accelerator.is_local_main_process):
-            cur_step = epoch * len(train_loader) + step
+    for step, batch in tqdm(enumerate(train_loader), desc="Training", total=len(train_loader),
+                            disable=not accelerator.is_local_main_process):
+        cur_step = epoch * len(train_loader) + step
+        if cur_step <= resume_step:
+            continue
 
-            if cur_step % training_args.eval_steps == 0 and cur_step > 0:
-                eval_loss = 0
-                eval_specialization_metric = 0
-                eval_accs = []
+        if cur_step % training_args.eval_steps == 0:  # and cur_step > 0:
+            eval_loss = 0
+            eval_specialization_metric = 0
+            eval_acc = 0
 
-                model.eval()
-                for eval_batch in tqdm(eval_loader, desc="Evaluating", leave=False,
-                                       disable=not accelerator.is_local_main_process):
-                    optimizer.zero_grad()
-                    loss, decoder_last_state, decoder_cache, decoder_states, decoder_attns, decoder_self_norms, \
-                    decoder_cross_norms, encoder_last_state, encoder_states, encoder_attns, encoder_norms = \
-                        model(**eval_batch, output_hidden_states=True, output_attentions=True, output_norms=True)
-
-                    loss = torch.mean(accelerator.gather(loss))
-                    encoder_norms = norms_to_tensor(accelerator.gather(encoder_norms))
-                    preds = torch.argmax(accelerator.gather(decoder_last_state), dim=-1).detach()
-                    acc = torch.eq(preds, accelerator.gather(eval_batch["labels"])).float().mean()
-                    eval_loss += loss.item()
-                    batch_specialization_metric, _ = compute_specialization_metric(encoder_norms)
-                    eval_specialization_metric += batch_specialization_metric
-                    eval_accs.append(acc.item())
-
-                if accelerator.is_local_main_process:
-                    wandb.log({
-                        "eval_loss": eval_loss / len(eval_loader),
-                        "eval_specialization_metric": eval_specialization_metric / len(tokenized_datasets["validation"]),
-                        "eval_acc": np.mean(eval_accs)
-                    }, step=cur_step)
-
-            model.train()
-            optimizer.zero_grad()
-            loss, decoder_features, decoder_cache, decoder_states, decoder_attns, decoder_self_norms, \
+            model.eval()
+            for eval_batch in tqdm(eval_loader, desc="Evaluating", leave=False,
+                                   disable=not accelerator.is_local_main_process):
+                optimizer.zero_grad()
+                loss, decoder_last_state, decoder_cache, decoder_states, decoder_attns, decoder_self_norms, \
                 decoder_cross_norms, encoder_last_state, encoder_states, encoder_attns, encoder_norms = \
-                model(**batch, output_hidden_states=True, output_attentions=True, output_norms=True)
+                    model(**eval_batch, output_hidden_states=True, output_attentions=True, output_norms=True)
 
-            loss = torch.mean(accelerator.gather(loss))
-            encoder_norms = norms_to_tensor(accelerator.gather(encoder_norms))
-            accelerator.backward(loss)
-            optimizer.step()
-            scheduler.step()
+                loss = torch.mean(accelerator.gather(loss))
+                encoder_norms = norms_to_tensor(accelerator.gather(encoder_norms))
+                preds = torch.argmax(accelerator.gather(decoder_last_state), dim=-1).detach().cpu()
+                acc = torch.eq(preds, accelerator.gather(eval_batch["labels"]).cpu()).float().sum()
+                eval_loss += loss.item()
+                batch_specialization_metric, _ = compute_specialization_metric(encoder_norms)
+                eval_specialization_metric += batch_specialization_metric
+                eval_acc += acc.item() / targets_length
 
-            total_train_loss += loss.item()
-            batch_specialization_metric, batch_size = compute_specialization_metric(encoder_norms)
-            total_train_specialization_metric += batch_specialization_metric
-            total_num_examples += batch_size
+            if accelerator.is_local_main_process:
+                num_eval_examples = len(tokenized_datasets["validation"])
+                wandb.log({
+                    "eval_loss": eval_loss / len(eval_loader),
+                    "eval_specialization_metric": eval_specialization_metric / num_eval_examples,
+                    "eval_acc": eval_acc / num_eval_examples
+                }, step=cur_step)
 
-            if cur_step % training_args.logging_steps == 0 and cur_step > 0:
-                if accelerator.is_local_main_process:
-                    wandb.log({
-                        "train_loss": total_train_loss / training_args.logging_steps,
-                        "train_specialization_metric": total_train_specialization_metric / total_num_examples,
-                        "learning_rate": scheduler.get_last_lr()[0]
-                    }, step=cur_step)
+        model.train()
+        optimizer.zero_grad()
+        loss, decoder_last_state, decoder_cache, decoder_states, decoder_attns, decoder_self_norms, \
+            decoder_cross_norms, encoder_last_state, encoder_states, encoder_attns, encoder_norms = \
+            model(**batch, output_hidden_states=True, output_attentions=True, output_norms=True)
 
-                total_train_loss = 0
-                total_train_specialization_metric = 0
-                total_num_examples = 0
+        loss = torch.mean(accelerator.gather(loss))
+        encoder_norms = norms_to_tensor(accelerator.gather(encoder_norms))
+        accelerator.backward(loss)
+        optimizer.step()
+        scheduler.step()
 
-            if cur_step % training_args.save_steps == 0 and cur_step > 0 and accelerator.is_local_main_process:
-                checkpoint = {
-                    "step": cur_step,
-                    "model": model.state_dict(),
-                    "optimizer": optimizer.state_dict(),
-                    "scheduler": scheduler
-                }
-                accelerator.save(checkpoint, f"{training_args.output_dir}/checkpoint_{cur_step // training_args.save_steps}.pt")
+        total_train_loss += loss.item()
+        batch_specialization_metric, batch_size = compute_specialization_metric(encoder_norms)
+        total_train_specialization_metric += batch_specialization_metric
+        total_num_examples += batch_size
+
+        if cur_step % training_args.logging_steps == 0 and cur_step > 0:
+            if accelerator.is_local_main_process:
+                wandb.log({
+                    "train_loss": total_train_loss / training_args.logging_steps,
+                    "train_specialization_metric": total_train_specialization_metric / total_num_examples,
+                    "learning_rate": scheduler.get_last_lr()[0]
+                }, step=cur_step)
+
+            total_train_loss = 0
+            total_train_specialization_metric = 0
+            total_num_examples = 0
+
+        if cur_step % training_args.save_steps == 0 and cur_step > 0 and accelerator.is_local_main_process:
+            checkpoint = {
+                "step": cur_step,
+                "model": model.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "scheduler": scheduler
+            }
+            accelerator.save(checkpoint, f"{training_args.output_dir}/checkpoint_{cur_step // training_args.save_steps}.pt")
 
 
 if __name__ == "__main__":
