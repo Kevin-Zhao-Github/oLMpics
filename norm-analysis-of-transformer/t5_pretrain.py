@@ -65,6 +65,9 @@ class TrainingArguments:
     per_device_eval_batch_size: int = field(
         default=8, metadata={"help": "Batch size per GPU/TPU core/CPU for evaluation."}
     )
+    gradient_accumulation_steps: int = field(
+        default=1, metadata={"help": "Number of steps before backprop."}
+    )
     learning_rate: float = field(default=5e-5, metadata={"help": "The initial learning rate for AdamW."})
     weight_decay: float = field(default=0.0, metadata={"help": "Weight decay for AdamW if we apply some."})
     adam_beta1: float = field(default=0.9, metadata={"help": "Beta1 for AdamW optimizer"})
@@ -409,13 +412,13 @@ class DataCollatorForT5MLM:
 def norms_to_tensor(encoder_norms):
     norm_list = []
     for el in encoder_norms:
-        norm_list.append(el[1].detach().cpu())
+        norm_list.append(el[0])  # .detach().cpu())  # TODO: was el[1]
 
-    del encoder_norms
+    # del encoder_norms
     return torch.stack(norm_list, dim=1)
 
 
-def compute_specialization_metric(encoder_norms):
+def compute_specialization_metric(encoder_norms, device):
     """
     Args:
         encoder_norms - Attention norms.
@@ -443,7 +446,8 @@ def compute_specialization_metric(encoder_norms):
 
         metric_list.append(single_head_mean.item() / all_head_mean.item())
 
-    return sum(metric_list), len(encoder_norms)
+    return torch.tensor(sum(metric_list), device=device, requires_grad=False), \
+           torch.tensor(len(encoder_norms), device=device, requires_grad=False)
 
 
 def main():
@@ -679,6 +683,8 @@ def main():
             eps=training_args.adam_epsilon
         )
 
+    optimizer.zero_grad()
+
     # Data collator
     # This one will take care of randomly masking the tokens.
     data_collator = DataCollatorForT5MLM(
@@ -701,12 +707,14 @@ def main():
     eval_loader = torch.utils.data.DataLoader(tokenized_datasets["validation"], shuffle=False,
                                               collate_fn=data_collator, batch_size=eval_batch_size)
 
-    num_train_steps = len(tokenized_datasets["train"]) // train_batch_size * num_epochs
+    # num_train_steps = len(tokenized_datasets["train"]) // train_batch_size * num_epochs
     # scheduler = transformers.get_linear_schedule_with_warmup(optimizer, training_args.warmup_steps, num_train_steps)
     scheduler = NoamLR(optimizer, warmup_steps=training_args.warmup_steps)
 
     if model_args.model_resume_checkpoint is not None:
-        logger.info("Resuming from checkpoint")
+        if accelerator.is_local_main_process:
+            logger.info("Resuming from checkpoint")
+
         checkpoint = torch.load(model_args.model_resume_checkpoint)
         model.load_state_dict(checkpoint["model"])
         optimizer.load_state_dict(checkpoint["optimizer"])
@@ -721,9 +729,9 @@ def main():
     assert num_epochs == 1
     epoch = 0
     # only the "total" since the last logging step
-    total_train_loss = 0
-    total_train_specialization_metric = 0
-    total_num_examples = 0
+    total_train_loss = torch.tensor([0.0], device=accelerator.device, requires_grad=False)
+    total_train_specialization_metric = torch.tensor([0.0], device=accelerator.device, requires_grad=False)
+    total_num_examples = torch.tensor([0.0], device=accelerator.device, requires_grad=False)
 
     for step, batch in tqdm(enumerate(train_loader), desc="Training", total=len(train_loader),
                             disable=not accelerator.is_local_main_process):
@@ -732,11 +740,17 @@ def main():
             continue
 
         if cur_step % training_args.eval_steps == 0:  # and cur_step > 0:
-            eval_loss = 0
-            eval_specialization_metric = 0
-            eval_acc = 0
+            if (cur_step + 1) % training_args.gradient_accumulation_steps != 0:
+                if accelerator.is_local_main_process:
+                    logger.info("Skipping evaluate because gradients are accumulated")
+
+                continue
+            eval_loss = torch.tensor([0.0], device=accelerator.device, requires_grad=False)
+            eval_specialization_metric = torch.tensor([0.0], device=accelerator.device, requires_grad=False)
+            eval_acc = torch.tensor([0.0], device=accelerator.device, requires_grad=False)
 
             model.eval()
+            batch.to("cpu")
             for eval_batch in tqdm(eval_loader, desc="Evaluating", leave=False,
                                    disable=not accelerator.is_local_main_process):
                 optimizer.zero_grad()
@@ -744,51 +758,70 @@ def main():
                 decoder_cross_norms, encoder_last_state, encoder_states, encoder_attns, encoder_norms = \
                     model(**eval_batch, output_hidden_states=True, output_attentions=True, output_norms=True)
 
-                loss = torch.mean(accelerator.gather(loss))
-                encoder_norms = norms_to_tensor(accelerator.gather(encoder_norms))
-                preds = torch.argmax(accelerator.gather(decoder_last_state), dim=-1).detach().cpu()
-                acc = torch.eq(preds, accelerator.gather(eval_batch["labels"]).cpu()).float().sum()
-                eval_loss += loss.item()
-                batch_specialization_metric, _ = compute_specialization_metric(encoder_norms)
+                preds = torch.argmax(decoder_last_state, dim=-1).detach().cpu()
+                acc = torch.eq(preds, eval_batch["labels"].cpu()).float().sum().to(accelerator.device)
+                del preds
+
+                batch_specialization_metric, batch_size = compute_specialization_metric(norms_to_tensor(encoder_norms), accelerator.device)
+                del encoder_norms
+
+                eval_loss += loss.detach()
+                eval_acc += acc / targets_length
                 eval_specialization_metric += batch_specialization_metric
-                eval_acc += acc.item() / targets_length
+                del batch_specialization_metric, batch_size, loss, acc
+
+            num_eval_examples = len(tokenized_datasets["validation"])
+            avg_eval_loss =  accelerator.gather(eval_loss).mean().item() / len(eval_loader)
+            avg_eval_specialization_metric = accelerator.gather(eval_specialization_metric).sum().item() / num_eval_examples
+            avg_eval_acc = accelerator.gather(eval_acc).sum().item() / num_eval_examples
 
             if accelerator.is_local_main_process:
-                num_eval_examples = len(tokenized_datasets["validation"])
                 wandb.log({
-                    "eval_loss": eval_loss / len(eval_loader),
-                    "eval_specialization_metric": eval_specialization_metric / num_eval_examples,
-                    "eval_acc": eval_acc / num_eval_examples
-                }, step=cur_step)
+                    "eval_loss": avg_eval_loss,
+                    "eval_specialization_metric": avg_eval_specialization_metric,
+                    "eval_acc": avg_eval_acc,
+                }, step=cur_step * 2)  # TODO: don't hardcode, multiply by num processes
+
+                del eval_loss, eval_acc, eval_specialization_metric
+
+            batch.to(accelerator.device)
+
+            optimizer.zero_grad()
 
         model.train()
-        optimizer.zero_grad()
         loss, decoder_last_state, decoder_cache, decoder_states, decoder_attns, decoder_self_norms, \
             decoder_cross_norms, encoder_last_state, encoder_states, encoder_attns, encoder_norms = \
             model(**batch, output_hidden_states=True, output_attentions=True, output_norms=True)
 
-        loss = torch.mean(accelerator.gather(loss))
-        encoder_norms = norms_to_tensor(accelerator.gather(encoder_norms))
         accelerator.backward(loss)
-        optimizer.step()
-        scheduler.step()
 
-        total_train_loss += loss.item()
-        batch_specialization_metric, batch_size = compute_specialization_metric(encoder_norms)
+        if (cur_step + 1) % training_args.gradient_accumulation_steps == 0:
+            optimizer.step()
+            scheduler.step()
+            optimizer.zero_grad()
+
+        batch_specialization_metric, batch_size = compute_specialization_metric(norms_to_tensor(encoder_norms), device=accelerator.device)
+
+        total_train_loss += loss.detach()
         total_train_specialization_metric += batch_specialization_metric
         total_num_examples += batch_size
 
+        del loss, batch_specialization_metric, batch_size
+
         if cur_step % training_args.logging_steps == 0 and cur_step > 0:
+            avg_train_loss = accelerator.gather(total_train_loss).mean().item() / training_args.logging_steps
+            avg_train_specialization_metric = accelerator.gather(total_train_specialization_metric).mean().item() \
+                                              / accelerator.gather(total_num_examples).mean().item()
             if accelerator.is_local_main_process:
                 wandb.log({
-                    "train_loss": total_train_loss / training_args.logging_steps,
-                    "train_specialization_metric": total_train_specialization_metric / total_num_examples,
-                    "learning_rate": scheduler.get_last_lr()[0]
-                }, step=cur_step)
+                    "train_loss": avg_train_loss,
+                    "train_specialization_metric": avg_train_specialization_metric,
+                    "learning_rate": scheduler.get_last_lr()[0],
+                }, step=cur_step * 2)  # TODO: don't hardcode, multiply by num processes
 
-            total_train_loss = 0
-            total_train_specialization_metric = 0
-            total_num_examples = 0
+            total_train_loss[0] = 0.0
+            total_train_specialization_metric[0] = 0.0
+            total_num_examples[0] = 0.0
 
         if cur_step % training_args.save_steps == 0 and cur_step > 0 and accelerator.is_local_main_process:
             checkpoint = {

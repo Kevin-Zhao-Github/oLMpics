@@ -1,22 +1,22 @@
 accelerate launch t5_pretrain.py \
     --model_type t5 \
-    --config_name t5-tiny-6L-4H \
+    --config_name t5-small-4L-8H \
     --tokenizer_name t5-small \
     --cache_dir /home/kzhao/.cache/huggingface/ \
     --dataset_pickle_path processed_realnewslike.pkl \
-    --model_resume_checkpoint t5_pretraining_1/checkpoint_5.pt \
     --max_seq_length 128 \
     --preprocessing_num_workers 4 \
-    --output_dir t5_pretraining_2 \
+    --output_dir t5_pretraining_1 \
     --do_train \
     --do_eval \
-    --per_device_train_batch_size 256 \
-    --per_device_eval_batch_size 256 \
+    --per_device_train_batch_size 32 \
+    --per_device_eval_batch_size 32 \
+    --gradient_accumulation_steps 2 \
     --learning_rate 0.003 \
     --weight_decay 0.001 \
     --adafactor \
     --num_train_epochs 1 \
-    --warmup_steps 4000 \
-    --save_steps 2000 \
-    --eval_steps 1000 \
-    --logging_steps 20
+    --warmup_steps 30000 \
+    --save_steps 15000 \
+    --eval_steps 8000 \
+    --logging_steps 100

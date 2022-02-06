@@ -423,31 +423,26 @@ class T5NormOutput(nn.Module):  # This class is added by Goro Kobayashi (as Bert
 
             # Make transformed vectors f(x) from Value vectors (value_layer) and weight matrix (dense).
             transformed_layer = value_layer.matmul(dense)
+
+            del value_layer, dense
+
             transformed_shape = transformed_layer.size()  # (batch, seq_length, num_heads, 1, all_head_size)
             transformed_layer = transformed_layer.view(transformed_shape[:-2] + (transformed_shape[-1],))
-            transformed_layer = transformed_layer.permute(0, 2, 1, 3).contiguous()
-            transformed_shape = transformed_layer.size()  # (batch, num_heads, seq_length, all_head_size)
-            transformed_norm = torch.norm(transformed_layer, dim=-1)
+            transformed_layer = transformed_layer.permute(0, 2, 1, 3).contiguous()  # (batch, num_heads, seq_length, all_head_size)
 
             # Make weighted vectors αf(x) from transformed vectors (transformed_layer) and attention weights (attention_probs).
             weighted_layer = torch.einsum('bhks,bhsd->bhksd', attention_probs,
                                           transformed_layer)  # (batch, num_heads, seq_length, seq_length, all_head_size)
+            del transformed_layer
+
             weighted_norm = torch.norm(weighted_layer, dim=-1)
 
-            # Sum each αf(x) over all heads: (batch, seq_length, seq_length, all_head_size)
-            summed_weighted_layer = weighted_layer.sum(dim=1)
+            del weighted_layer
 
-            # Calculate L2 norm of summed weighted vectors: (batch, seq_length, seq_length)
-            summed_weighted_norm = torch.norm(summed_weighted_layer, dim=-1)
+            # outputs: ||αf(x)|| - Changed by KZ
+            outputs = (weighted_norm.cpu(),)
+            del weighted_norm
 
-            del transformed_shape
-
-            # outputs: ||f(x)||, ||αf(x)||, ||Σαf(x)||
-            outputs = (transformed_norm,
-                       weighted_norm,
-                       summed_weighted_norm,
-                       )
-            del transformed_layer, weighted_layer, summed_weighted_layer
         torch.cuda.empty_cache()
         return outputs
 
