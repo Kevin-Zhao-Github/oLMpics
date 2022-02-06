@@ -780,7 +780,7 @@ def main():
                     "eval_loss": avg_eval_loss,
                     "eval_specialization_metric": avg_eval_specialization_metric,
                     "eval_acc": avg_eval_acc,
-                }, step=cur_step * 2)  # TODO: don't hardcode, multiply by num processes
+                }, step=cur_step)
 
                 del eval_loss, eval_acc, eval_specialization_metric
 
@@ -817,7 +817,7 @@ def main():
                     "train_loss": avg_train_loss,
                     "train_specialization_metric": avg_train_specialization_metric,
                     "learning_rate": scheduler.get_last_lr()[0],
-                }, step=cur_step * 2)  # TODO: don't hardcode, multiply by num processes
+                }, step=cur_step)
 
             total_train_loss[0] = 0.0
             total_train_specialization_metric[0] = 0.0

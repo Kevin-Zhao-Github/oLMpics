@@ -2,9 +2,12 @@ from itertools import chain
 import pickle
 
 import transformers
+import datasets
 from datasets import load_dataset
 
-datasets = load_dataset("c4", "realnewslike", cache_dir="/mnt/home/kzhao/.cache/huggingface")
+datasets = load_dataset("c4", "en", cache_dir="/mnt/home/.cache/datasets")
+datasets["train"] = load_dataset("c4", "en", cache_dir="/mnt/home/.cache/datasets", split="train[:10%]")
+
 tokenizer = transformers.AutoTokenizer.from_pretrained("t5-small")
 
 def tokenize_function(examples):
@@ -13,7 +16,7 @@ def tokenize_function(examples):
 tokenized_datasets = datasets.map(
     tokenize_function,
     batched=True,
-    num_proc=16,
+    num_proc=128,
     remove_columns=['text', 'timestamp', 'url'],
 )
 
@@ -37,8 +40,8 @@ def group_texts(examples):
 processed_datasets = tokenized_datasets.map(
     group_texts,
     batched=True,
-    num_proc=16,
+    num_proc=128,
 )
 
-with open("processed_realnewslike.pkl", "wb") as f:
+with open("processed_en.pkl", "wb") as f:
     pickle.dump(processed_datasets, f)
