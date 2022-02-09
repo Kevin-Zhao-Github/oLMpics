@@ -105,6 +105,60 @@ def load_tf_weights_in_gpt2(model, config, gpt2_checkpoint_path):
     return model
 
 
+class GPTNormOutput(nn.Module):  # This class is added by Goro Kobayashi (as BertNormOutput)
+    def __init__(self, config):
+        super().__init__()
+        self.num_attention_heads = config.num_attention_heads
+        self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
+        self.all_head_size = self.num_attention_heads * self.attention_head_size
+
+    def forward(self, attention_probs, value_layer, dense):  # removed hidden states - Kevin Zhao
+        # attention_probs: (batch, num_heads, seq_length, seq_length)
+        # value_layer: (batch, num_heads, seq_length, head_size)
+        # dense: nn.Linear(all_head_size, all_head_size)
+
+        with torch.no_grad():
+            # value_layer is converted to (batch, seq_length, num_heads, 1, head_size)
+            value_layer = value_layer.permute(0, 2, 1, 3).contiguous()
+            value_shape = value_layer.size()
+            value_layer = value_layer.view(value_shape[:-1] + (1, value_shape[-1],))
+
+            # dense weight is converted to (num_heads, head_size, all_head_size)
+            dense = dense.weight.T  # added by Kevin Zhao because transformers.modeling_utils.Conv1D has transposed weights
+            dense = dense.view(self.all_head_size, self.num_attention_heads, self.attention_head_size)
+            dense = dense.permute(1, 2, 0).contiguous()
+
+            # Make transformed vectors f(x) from Value vectors (value_layer) and weight matrix (dense).
+            transformed_layer = value_layer.matmul(dense)
+            transformed_shape = transformed_layer.size()  # (batch, seq_length, num_heads, 1, all_head_size)
+            transformed_layer = transformed_layer.view(transformed_shape[:-2] + (transformed_shape[-1],))
+            transformed_layer = transformed_layer.permute(0, 2, 1, 3).contiguous()
+            transformed_shape = transformed_layer.size()  # (batch, num_heads, seq_length, all_head_size)
+            transformed_norm = torch.norm(transformed_layer, dim=-1)
+
+            # Make weighted vectors αf(x) from transformed vectors (transformed_layer) and attention weights (attention_probs).
+            weighted_layer = torch.einsum('bhks,bhsd->bhksd', attention_probs,
+                                          transformed_layer)  # (batch, num_heads, seq_length, seq_length, all_head_size)
+            weighted_norm = torch.norm(weighted_layer, dim=-1)
+
+            # Sum each αf(x) over all heads: (batch, seq_length, seq_length, all_head_size)
+            summed_weighted_layer = weighted_layer.sum(dim=1)
+
+            # Calculate L2 norm of summed weighted vectors: (batch, seq_length, seq_length)
+            summed_weighted_norm = torch.norm(summed_weighted_layer, dim=-1)
+
+            del transformed_shape
+
+            # outputs: ||f(x)||, ||αf(x)||, ||Σαf(x)||
+            outputs = (transformed_norm,
+                       weighted_norm,
+                       summed_weighted_norm,
+                       )
+            del transformed_layer, weighted_layer, summed_weighted_layer
+        torch.cuda.empty_cache()
+        return outputs
+
+
 class Attention(nn.Module):
     def __init__(self, nx, n_ctx, config, scale=False):
         super().__init__()
@@ -122,6 +176,8 @@ class Attention(nn.Module):
 
         self.c_attn = Conv1D(n_state * 3, nx)
         self.c_proj = Conv1D(n_state, nx)
+        self.norm = GPTNormOutput(config)  # added by Kevin Zhao
+
         self.attn_dropout = nn.Dropout(config.attn_pdrop)
         self.resid_dropout = nn.Dropout(config.resid_pdrop)
         self.pruned_heads = set()
@@ -181,7 +237,8 @@ class Attention(nn.Module):
             return x.permute(0, 2, 1, 3)  # (batch, head, seq_length, head_features)
 
     def forward(
-        self, x, layer_past=None, attention_mask=None, head_mask=None, use_cache=False, output_attentions=False
+        self, x, layer_past=None, attention_mask=None, head_mask=None, use_cache=False,
+            output_attentions=False, output_norms=False  # added by Kevin Zhao
     ):
         x = self.c_attn(x)
         query, key, value = x.split(self.split_size, dim=2)
@@ -198,6 +255,9 @@ class Attention(nn.Module):
         else:
             present = (None,)
 
+        if output_norms and not output_attentions:  # added by Kevin Zhao
+            raise NotImplementedError
+
         attn_outputs = self._attn(query, key, value, attention_mask, head_mask, output_attentions)
         a = attn_outputs[0]
 
@@ -206,7 +266,12 @@ class Attention(nn.Module):
         a = self.resid_dropout(a)
 
         outputs = [a, present] + attn_outputs[1:]
-        return outputs  # a, present, (attentions)
+
+        if output_norms:  # added by Kevin Zhao
+            norms_outputs = self.norm(attn_outputs[1], value, self.c_proj)
+            outputs.append(norms_outputs)
+
+        return outputs  # a, present, (attentions), (norms)
 
 
 class MLP(nn.Module):
@@ -234,7 +299,8 @@ class Block(nn.Module):
         self.mlp = MLP(4 * nx, config)
 
     def forward(
-        self, x, layer_past=None, attention_mask=None, head_mask=None, use_cache=False, output_attentions=False,
+        self, x, layer_past=None, attention_mask=None, head_mask=None, use_cache=False,
+            output_attentions=False, output_norms=False  # added by Kevin Zhao
     ):
         output_attn = self.attn(
             self.ln_1(x),
@@ -243,15 +309,16 @@ class Block(nn.Module):
             head_mask=head_mask,
             use_cache=use_cache,
             output_attentions=output_attentions,
+            output_norms=output_norms  # added by Kevin Zhao
         )
-        a = output_attn[0]  # output_attn: a, present, (attentions)
+        a = output_attn[0]  # output_attn: a, present, (attentions), (norms)
 
         x = x + a
         m = self.mlp(self.ln_2(x))
         x = x + m
 
         outputs = [x] + output_attn[1:]
-        return outputs  # x, present, (attentions)
+        return outputs  # x, present, (attentions), (norms)
 
 
 class GPT2PreTrainedModel(PreTrainedModel):
@@ -385,6 +452,7 @@ class GPT2Model(GPT2PreTrainedModel):
         use_cache=None,
         output_attentions=None,
         output_hidden_states=None,
+        output_norms=False,  # added by Kevin Zhao
     ):
         r"""
     Return:
@@ -480,6 +548,7 @@ class GPT2Model(GPT2PreTrainedModel):
         presents = ()
         all_attentions = []
         all_hidden_states = ()
+        all_norms = ()  # added by Kevin Zhao
         for i, (block, layer_past) in enumerate(zip(self.h, past)):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states.view(*output_shape),)
@@ -491,7 +560,8 @@ class GPT2Model(GPT2PreTrainedModel):
                 head_mask=head_mask[i],
                 use_cache=use_cache,
                 output_attentions=output_attentions,
-            )
+                output_norms=output_norms,  # added by Kevin Zhao
+            )  # x, present, (attentions), (norms)
 
             hidden_states, present = outputs[:2]
             if use_cache is True:
@@ -499,6 +569,10 @@ class GPT2Model(GPT2PreTrainedModel):
 
             if output_attentions:
                 all_attentions.append(outputs[2])
+
+            if output_norms:  # added by Kevin Zhao
+                assert len(outputs) == 4
+                all_norms = all_norms + (outputs[3],)
 
         hidden_states = self.ln_f(hidden_states)
 
@@ -517,7 +591,9 @@ class GPT2Model(GPT2PreTrainedModel):
             attention_output_shape = input_shape[:-1] + (-1,) + all_attentions[0].shape[-2:]
             all_attentions = tuple(t.view(*attention_output_shape) for t in all_attentions)
             outputs = outputs + (all_attentions,)
-        return outputs  # last hidden state, (presents), (all hidden_states), (attentions)
+        if output_norms:  # added by Kevin Zhao
+            outputs = outputs + (all_norms,)
+        return outputs  # last hidden state, (presents), (all hidden_states), (attentions), (norms)
 
 
 @add_start_docstrings(

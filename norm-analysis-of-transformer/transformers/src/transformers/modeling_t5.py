@@ -184,9 +184,12 @@ class T5LayerFF(nn.Module):
         self.layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(config.dropout_rate)
 
-    def forward(self, hidden_states):
+    def forward(self, hidden_states, residual=True):
         norm_x = self.layer_norm(hidden_states)
         y = self.DenseReluDense(norm_x)
+        if not residual:
+            return self.dropout(y)
+
         layer_output = hidden_states + self.dropout(y)
         return layer_output
 
@@ -465,6 +468,7 @@ class T5LayerSelfAttention(nn.Module):
         use_cache=False,
         output_attentions=False,
         output_norms=False,  # added by Kevin Zhao
+        residual=True,  # Added by Kevin Zhao
     ):
         norm_x = self.layer_norm(hidden_states)
         attention_output = self.SelfAttention(
@@ -478,7 +482,11 @@ class T5LayerSelfAttention(nn.Module):
             output_norms=output_norms,  # added by Kevin Zhao
         )  # Should be: context, present_key_value_state, (weights), (position_bias), (values) - Kevin Zhao
         y = attention_output[0]
-        layer_output = hidden_states + self.dropout(y)
+
+        if residual:
+            layer_output = hidden_states + self.dropout(y)
+        else:
+            layer_output = self.dropout(y)
 
         if output_norms:  # added by Kevin Zhao
             if self.SelfAttention.has_relative_attention_bias:
@@ -516,6 +524,7 @@ class T5LayerCrossAttention(nn.Module):
         query_length=None,
         output_attentions=False,
         output_norms=False,  # added by Kevin Zhao
+        residual=True,  # Added by Kevin Zhao
     ):
         norm_x = self.layer_norm(hidden_states)
         attention_output = self.EncDecAttention(
@@ -531,7 +540,11 @@ class T5LayerCrossAttention(nn.Module):
             output_norms=output_norms,  # added by Kevin Zhao
         )
         y = attention_output[0]
-        layer_output = hidden_states + self.dropout(y)
+
+        if residual:
+            layer_output = hidden_states + self.dropout(y)
+        else:
+            layer_output = self.dropout(y)
 
         if output_norms:  # added by Kevin Zhao
             if self.EncDecAttention.has_relative_attention_bias:
@@ -574,6 +587,8 @@ class T5Block(nn.Module):
         use_cache=False,
         output_attentions=False,
         output_norms=False,  # Added by Kevin Zhao
+        attn_residual=True,  # Added by Kevin Zhao
+        ff_residual=True,  # Added by Kevin Zhao
     ):
 
         if past_key_value_state is not None:
@@ -601,6 +616,7 @@ class T5Block(nn.Module):
             use_cache=use_cache,
             output_attentions=output_attentions,
             output_norms=output_norms,  # Added by Kevin Zhao
+            residual=attn_residual,  # Added by Kevin Zhao
         )
         hidden_states, present_key_value_state = self_attention_outputs[:2]
         attention_outputs = self_attention_outputs[2:]  # Keep self-attention outputs and relative position weights
@@ -624,6 +640,7 @@ class T5Block(nn.Module):
                 use_cache=use_cache,
                 output_attentions=output_attentions,
                 output_norms=output_norms,  # Added by Kevin Zhao
+                residual=attn_residual,  # Added by Kevin Zhao
             )
             hidden_states = cross_attention_outputs[0]
             # Combine self attn and cross attn key value states
@@ -634,7 +651,7 @@ class T5Block(nn.Module):
             attention_outputs = attention_outputs + cross_attention_outputs[2:]
 
         # Apply Feed Forward layer
-        hidden_states = self.layer[-1](hidden_states)
+        hidden_states = self.layer[-1](hidden_states, residual=ff_residual)
         outputs = (hidden_states,)
 
         # Add attentions if we output them
@@ -724,7 +741,8 @@ class T5Stack(T5PreTrainedModel):
         self.is_decoder = config.is_decoder
 
         self.block = nn.ModuleList(
-            [T5Block(config, has_relative_attention_bias=bool(i == 0)) for i in range(config.num_layers)]
+            [T5Block(config, has_relative_attention_bias=bool(i == 0))
+             for i in range(config.num_layers)]
         )
         self.final_layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(config.dropout_rate)
@@ -753,6 +771,8 @@ class T5Stack(T5PreTrainedModel):
         output_attentions=None,
         output_hidden_states=None,
         output_norms=None,  # Added by Kevin Zhao
+        attn_residual=True,    # Added by Kevin Zhao
+        ff_residual=True,  # Added by Kevin Zhao
     ):
 
         use_cache = use_cache if use_cache is not None else self.config.use_cache
@@ -838,6 +858,8 @@ class T5Stack(T5PreTrainedModel):
                 use_cache=use_cache,
                 output_attentions=output_attentions,
                 output_norms=output_norms,  # Added by Kevin Zhao
+                attn_residual=attn_residual,  # Added by Kevin Zhao
+                ff_residual=ff_residual,  # Added by Kevin Zhao
             )
             # layer_outputs is a tuple with:
             # hidden-states, key-value-states, (self-attention weights), (self-attention position bias), (cross-attention weights), (cross-attention position bias)
@@ -967,7 +989,7 @@ T5_INPUTS_DOCSTRING = r"""
     T5_START_DOCSTRING,
 )
 class T5Model(T5PreTrainedModel):
-    def __init__(self, config):
+    def __init__(self, config, attn_residual=True, ff_residual=True):
         super().__init__(config)
         self.shared = nn.Embedding(config.vocab_size, config.d_model)
 
@@ -1019,6 +1041,8 @@ class T5Model(T5PreTrainedModel):
         output_attentions=None,
         output_hidden_states=None,
         output_norms=None,  # Added by Kevin Zhao
+        attn_residual=True,  # Added by Kevin Zhao
+        ff_residual = True,  # Added by Kevin Zhao
     ):
         r"""
     Returns:
@@ -1065,6 +1089,8 @@ class T5Model(T5PreTrainedModel):
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
                 output_norms=output_norms,  # Added by Kevin Zhao
+                attn_residual=attn_residual,  # Added by Kevin Zhao
+                ff_residual=ff_residual,  # Added by Kevin Zhao
             )
 
         hidden_states = encoder_outputs[0]
@@ -1090,6 +1116,8 @@ class T5Model(T5PreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             output_norms=output_norms,  # Added by Kevin Zhao
+            attn_residual=attn_residual,  # Added by Kevin Zhao
+            ff_residual=ff_residual,  # Added by Kevin Zhao
         )
 
         if use_cache is True:
@@ -1101,7 +1129,7 @@ class T5Model(T5PreTrainedModel):
 
 @add_start_docstrings("""T5 Model with a `language modeling` head on top. """, T5_START_DOCSTRING)
 class T5ForConditionalGeneration(T5PreTrainedModel):
-    def __init__(self, config):
+    def __init__(self, config, attn_residual=True, ff_residual=True):
         super().__init__(config)
         self.model_dim = config.d_model
 
@@ -1153,6 +1181,8 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
         output_attentions=None,
         output_hidden_states=None,
         output_norms=None,  # Added by Kevin Zhao
+        attn_residual=True,  # Added by Kevin Zhao
+        ff_residual=True,  # Added by Kevin Zhao
         **kwargs
     ):
         r"""
@@ -1224,6 +1254,8 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
                 output_norms=output_norms,  # Added by Kevin Zhao
+                attn_residual=attn_residual,  # Added by Kevin Zhao
+                ff_residual=ff_residual,  # Added by Kevin Zhao
             )
 
         hidden_states = encoder_outputs[0]
@@ -1254,6 +1286,8 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             output_norms=output_norms,  # Added by Kevin Zhao
+            attn_residual=attn_residual,  # Added by Kevin Zhao
+            ff_residual=ff_residual,  # Added by Kevin Zhao
         )
 
         # insert decoder past at right place
