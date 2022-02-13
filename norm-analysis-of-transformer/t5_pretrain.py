@@ -740,7 +740,7 @@ def main():
             continue
 
         if cur_step % training_args.eval_steps == 0:  # and cur_step > 0:
-            if (cur_step + 1) % training_args.gradient_accumulation_steps != 0:
+            if (cur_step) % training_args.gradient_accumulation_steps != 0:
                 if accelerator.is_local_main_process:
                     logger.info("Skipping evaluate because gradients are accumulated")
 

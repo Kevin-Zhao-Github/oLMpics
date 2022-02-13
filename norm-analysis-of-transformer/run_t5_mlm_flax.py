@@ -25,6 +25,8 @@ import sys
 import time
 from dataclasses import asdict, dataclass, field
 import pickle
+import cloudpickle
+from functools import partial
 
 # You can also adapt this script on your own masked language modeling task. Pointers for this are left as comments.
 from enum import Enum
@@ -35,6 +37,7 @@ from typing import Dict, List, Optional
 import numpy as np
 from datasets import load_dataset
 from tqdm import tqdm
+import scipy
 
 import flax
 import jax
@@ -149,6 +152,12 @@ class ModelArguments:
     tokenizer_name: Optional[str] = field(
         default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
     )
+    layer_norm_type: Optional[str] = field(
+        default=None, metadata={"help": "Type of LayerNorm to use for T5 (defaults to bias-less version)"}
+    )
+    layer_norm_position: Optional[str] = field(
+        default=None, metadata={"help": "Pre-Norm (default) or Post-Norm"}
+    )
     cache_dir: Optional[str] = field(
         default=None, metadata={"help": "Where do you want to store the pretrained models downloaded from s3"}
     )
@@ -232,6 +241,44 @@ class DataTrainingArguments:
             if self.validation_file is not None:
                 extension = self.validation_file.split(".")[-1]
                 assert extension in ["csv", "json", "txt"], "`validation_file` should be a csv, a json or a txt file."
+
+
+@partial(jnp.vectorize, signature="(n,m)->(n,n)")
+def pairwise_manhattan(encoder_attns):
+    return jnp.abs(encoder_attns[:, None, :] - encoder_attns[None, :, :]).sum(axis=-1)
+
+
+def compute_specialization_metric(encoder_attns):
+    """
+    Args:
+        encoder_attns - Attention weights.
+                        jax.DeviceArray of shape (batch_size, num_layers, num_heads, seq_len, seq_len)
+    """
+
+    batch_size, num_layers, num_heads, seq_len, seq_len2 = encoder_attns.shape
+    assert seq_len == seq_len2
+    encoder_attns = jnp.swapaxes(encoder_attns, 1, 2)  # flip layer dimension with head dimension
+    encoder_attns = jax.nn.normalize(encoder_attns.reshape(encoder_attns.shape[:-2] + (-1,)),
+                                     axis=-1, variance=1)  # flatten and divide each attention pattern by its mean
+    # encoder_attns now has a shape of (num_heads, num_layers, seq_len * seq_len)
+
+    metric_list = []
+    for encoder_attn in encoder_attns:
+        head_means = []
+        for single_head_attns in encoder_attn:
+            all_head_dists = pairwise_manhattan(single_head_attns)
+            num_head_dists = num_layers * (num_layers - 1) // 2
+            head_means.append(jax.scipy.linalg.triu(all_head_dists, k=1).sum() / num_head_dists)
+
+        single_head_mean = jnp.stack(head_means).mean()
+
+        all_dists = pairwise_manhattan(encoder_attn.reshape(num_layers * num_heads, -1))
+        num_dists = num_layers * num_heads * (num_layers * num_heads - 1) // 2
+        all_head_mean = jax.scipy.linalg.triu(all_dists, k=1).sum() / num_dists
+
+        metric_list.append(single_head_mean / all_head_mean)
+
+    return jnp.stack(metric_list).mean()
 
 
 def compute_input_and_target_lengths(inputs_length, noise_density, mean_noise_span_length):
@@ -610,6 +657,11 @@ def main():
         logger.warning("You are instantiating a new config instance from scratch.")
 
     config.decoder_start_token_id = config.pad_token_id
+    if model_args.layer_norm_type is not None:
+        config.layer_norm = model_args.layer_norm_type
+
+    if model_args.layer_norm_position is not None:
+        config.norm_position = model_args.layer_norm_position
 
     max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
     # T5-like span masked language modeling will fuse consecutively masked tokens to a single sentinel token.
@@ -761,21 +813,24 @@ def main():
         def loss_fn(params):
             labels = batch.pop("labels")
 
-            logits = state.apply_fn(**batch, params=params, dropout_rng=dropout_rng, train=True)[0]
+            outputs = state.apply_fn(**batch, output_attentions=True, params=params, dropout_rng=dropout_rng, train=True)
+            logits = outputs["logits"]
 
             # compute loss
             loss = optax.softmax_cross_entropy(logits, onehot(labels, logits.shape[-1])).mean()
 
-            return loss
+            return loss, jnp.swapaxes(jnp.stack(outputs["encoder_attentions"]), 0, 1)
 
-        grad_fn = jax.value_and_grad(loss_fn)
-        loss, grad = grad_fn(state.params)
+        grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
+        (loss, encoder_attns), grad = grad_fn(state.params)
         grad = jax.lax.pmean(grad, "batch")
         new_state = state.apply_gradients(grads=grad)
 
-        metrics = jax.lax.pmean(
-            {"loss": loss, "learning_rate": linear_decay_lr_schedule_fn(state.step)}, axis_name="batch"
-        )
+        metrics = jax.lax.pmean({
+            "loss": loss,
+            "learning_rate": linear_decay_lr_schedule_fn(state.step),
+            "specialization": compute_specialization_metric(encoder_attns)
+        }, axis_name="batch")
 
         return new_state, metrics, new_dropout_rng
 
@@ -786,7 +841,8 @@ def main():
     def eval_step(params, batch):
         labels = batch.pop("labels")
 
-        logits = model(**batch, params=params, train=False)[0]
+        outputs = model(**batch, output_attentions=True, params=params, train=False)
+        logits = outputs["logits"]
 
         # compute loss
         loss = optax.softmax_cross_entropy(logits, onehot(labels, logits.shape[-1]))
@@ -794,8 +850,11 @@ def main():
         # compute accuracy
         accuracy = jnp.equal(jnp.argmax(logits, axis=-1), labels)
 
+        # compute head specialization
+        specialization = compute_specialization_metric(jnp.swapaxes(jnp.stack(outputs["encoder_attentions"]), 0, 1))
+
         # summarize metrics
-        metrics = {"loss": loss.mean(), "accuracy": accuracy.mean()}
+        metrics = {"loss": loss.mean(), "accuracy": accuracy.mean(), "specialization": specialization}
         metrics = jax.lax.pmean(metrics, axis_name="batch")
 
         return metrics
@@ -866,7 +925,10 @@ def main():
                 eval_metrics = jax.tree_map(jnp.mean, eval_metrics)
 
                 # Update progress bar
-                # epochs.write(f"Step... ({cur_step} | Loss: {eval_metrics['loss']}, Acc: {eval_metrics['accuracy']})")
+                epochs.write(f"Step... ({cur_step} | "
+                             f"Loss: {eval_metrics['loss']}, "
+                             f"Acc: {eval_metrics['accuracy']},"
+                             f"Specialization: {eval_metrics['specialization']})")
 
                 # Save metrics
                 if jax.process_index() == 0:
@@ -876,8 +938,13 @@ def main():
                 # save checkpoint after each epoch and push checkpoint to the hub
                 if jax.process_index() == 0:
                     params = jax.device_get(jax.tree_map(lambda x: x[0], state.params))
-                    model.save_pretrained(training_args.output_dir, params=params)
-                    tokenizer.save_pretrained(training_args.output_dir)
+                    step_checkpoint_path = os.path.join(training_args.output_dir,
+                                                        f"checkpoint_{cur_step // training_args.save_steps}")
+                    model.save_pretrained(step_checkpoint_path, params=params)
+                    tokenizer.save_pretrained(step_checkpoint_path)
+                    with open(os.path.join(step_checkpoint_path, "optimizer.pkl"), "wb") as f:
+                        cloudpickle.dump((optimizer, train_state), f)
+
                     if training_args.push_to_hub:
                         repo.push_to_hub(commit_message=f"Saving weights and logs of step {cur_step}", blocking=False)
 
